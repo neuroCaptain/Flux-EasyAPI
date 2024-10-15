@@ -9,7 +9,7 @@ from config import (
     COMFYUI_REQUIREMENTS_FILE,
 )
 from modules.downloader import downloader
-from modules.logging import logger
+from modules.logger import logger
 
 
 def upgrade_pip():

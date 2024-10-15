@@ -4,7 +4,7 @@ from pathlib import Path
 import aiohttp
 from tqdm import tqdm
 
-from modules.logging import logger
+from modules.logger import logger
 from config import (
     HUGGINGFACE_TOKEN,
     ClipL,

@@ -12,10 +12,13 @@ HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
 BASE_DIR = Path(__file__).resolve().parent
 TEMP_DIR = BASE_DIR / "temp"
 TEMP_DIR.mkdir(exist_ok=True)
+WORKFLOWS_DIR = BASE_DIR / "workflows"
 
 
 # ComfyUI
 COMFYUI_REPO = "https://github.com/comfyanonymous/ComfyUI"
+
+COMFYUI_BASE_URL = "http://127.0.0.1:8188"
 
 COMFYUI_DIR = BASE_DIR / "ComfyUI"
 
