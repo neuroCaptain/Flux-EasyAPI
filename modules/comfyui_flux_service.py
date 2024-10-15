@@ -50,7 +50,11 @@ def prepare_schnell_workflow(
     workflow["25"]["inputs"]["noise_seed"] = noise_seed
     workflow["17"]["inputs"]["steps"] = steps
     workflow["6"]["inputs"]["text"] = prompt
-    logger.info("Schnell workflow prepared")
+    logger.info(
+        f"Schnell workflow prepared with prompt: {prompt}, "
+        f"width: {width}, height: {height}, batch_size: {batch_size}, "
+        f"noise_seed: {noise_seed}, steps: {steps}"
+    )
     return workflow
 
 
@@ -72,7 +76,12 @@ def prepare_dev_workflow(
     workflow["30"]["inputs"]["height"] = height
     workflow["30"]["inputs"]["noise_seed"] = noise_seed
     workflow["17"]["inputs"]["steps"] = steps
-    logger.info("Dev workflow prepared")
+
+    logger.info(
+        f"Dev workflow prepared with prompt: {prompt}, "
+        f"width: {width}, height: {height}, batch_size: {batch_size}, "
+        f"noise_seed: {noise_seed}, steps: {steps}"
+    )
     return workflow
 
 
