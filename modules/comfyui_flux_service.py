@@ -3,7 +3,7 @@ import random
 
 import json
 from pathlib import Path
-from urllib import request, parse
+from urllib import request
 
 from config import COMFYUI_BASE_URL, WORKFLOWS_DIR
 from modules.logger import logger
@@ -39,7 +39,7 @@ def queue_prompt(nodes):
 
 
 def get_queue_status():
-    req = request.Request(f"{COMFYUI_BASE_URL}/queue")
+    req = request.Request(f"{COMFYUI_BASE_URL}/api/queue")
     return json.loads(request.urlopen(req).read().decode("utf-8"))
 
 
