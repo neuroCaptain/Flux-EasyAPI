@@ -2,3 +2,4 @@ GitPython
 aiohttp
 tqdm
 gradio
+python-dotenv

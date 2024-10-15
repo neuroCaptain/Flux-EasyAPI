@@ -16,7 +16,7 @@ def upgrade_pip():
     logger.info("Upgrading pip...")
     subprocess.run(
         ["pip", "install", "--upgrade", "pip"],
-        stdout=subprocess.DEVNULL, 
+        stdout=subprocess.DEVNULL,
         stderr=subprocess.PIPE,
     )
     logger.info("Pip upgraded.")
