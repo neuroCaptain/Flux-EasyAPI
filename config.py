@@ -65,3 +65,6 @@ class FluxSchnell(Enum):
     URL = "https://huggingface.co/black-forest-labs/FLUX.1-schnell/resolve/main/flux1-schnell.safetensors"  # noqa: E501
     NAME = "flux1-schnell.safetensors"
     PATH = UNET_DIR / NAME
+
+
+

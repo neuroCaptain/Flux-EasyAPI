@@ -1,10 +1,10 @@
 import asyncio
-import logging
 from pathlib import Path
 
-import aiohttp 
-from tqdm import tqdm 
+import aiohttp
+from tqdm import tqdm
 
+from modules.logging import logger
 from config import (
     HUGGINGFACE_TOKEN,
     ClipL,
@@ -15,9 +15,6 @@ from config import (
     FluxSchnell,
 )
 
-
-logger = logging.getLogger()
-logging.basicConfig(level=logging.INFO)
 
 TO_DOWNLOAD = [VAE, ClipL]
 
@@ -103,16 +100,20 @@ def models_menu():
         TO_DOWNLOAD.append(FluxSchnell)
 
 
-async def download():
+async def download(reinstall: bool = False):
     tasks = []
     for model in TO_DOWNLOAD:
         if model.PATH.value.exists():
-            logger.info(f"{model.NAME} already exists")
-            print("Do you want to download it again?")
-            choice = input("Enter your choice: ")
-            while choice not in ["y", "n"]:
-                print("Invalid choice")
-                choice = input("Enter your choice: ")
+            logger.info(f"{model.NAME.value} already exists.")
+            if not reinstall:
+                print("Do you want to download it again?")
+                choice = input("Enter your choice (y/n): ")
+                while choice not in ["y", "n"]:
+                    print("Invalid choice")
+                    choice = input("Enter your choice (y/n): ")
+            else:
+                logger.info(f"{model.NAME.value} will be reinstalled.")
+                choice = "y"
             if choice == "y":
                 model.PATH.value.unlink()
                 tasks.append(download_model(model.URL.value, model.PATH.value))
@@ -121,10 +122,22 @@ async def download():
     await asyncio.gather(*tasks)
 
 
-async def downloader():
-    clips_menu()
-    models_menu()
-    await download()
+async def downloader(choices: set[str] | None = None, reinstall: bool = False):
+    if choices is None:
+        clips_menu()
+        models_menu()
+    else:
+        logger.info("Silently downloading models...")
+        for choice in choices:
+            if choice == "1":
+                TO_DOWNLOAD.append(FP16)
+            elif choice == "2":
+                TO_DOWNLOAD.append(FP8)
+            elif choice == "3":
+                TO_DOWNLOAD.append(FluxDev)
+            elif choice == "4":
+                TO_DOWNLOAD.append(FluxSchnell)
+    await download(reinstall)
 
 
 if __name__ == "__main__":
