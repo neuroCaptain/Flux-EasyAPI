@@ -50,7 +50,7 @@ async def health():
 @dev_router.post("/generate", status_code=status.HTTP_204_NO_CONTENT)
 async def dev_generate_bulk(to_generate: GenerateSchema):
     try:
-        generate("dev", to_generate.model_dump(exclude_none=True))
+        generate("dev", **to_generate.model_dump(exclude_none=True))
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -59,7 +59,7 @@ async def dev_generate_bulk(to_generate: GenerateSchema):
 @schnell_router.post("/generate", status_code=status.HTTP_204_NO_CONTENT)
 async def schnell_generate_bulk(to_generate: GenerateSchema):
     try:
-        generate("schnell", to_generate.model_dump(exclude_none=True))
+        generate("schnell", **to_generate.model_dump(exclude_none=True))
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
