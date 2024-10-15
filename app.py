@@ -1,12 +1,29 @@
 from fastapi import FastAPI, APIRouter
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+import subprocess
 
 from modules.comfyui_flux_service import generate
+from config import COMFYUI_DIR, OUTPUT_DIR, TEMP_DIR
 
 
 app = FastAPI()
 schnell_router = APIRouter(prefix="/schnell", tags=["schnell"])
 dev_router = APIRouter(prefix="/dev", tags=["dev"])
+
+# app.mount("/temp", StaticFiles(directory=TEMP_DIR), name="temp")
+app.mount("/output", StaticFiles(directory=OUTPUT_DIR), name="output")
+
+# @app.on_event("startup")
+# async def startup():
+#     if not (COMFYUI_DIR / "main.py").exists():
+#         raise Exception("ComfyUI not found")
+#     subprocess.Popen(["python", (COMFYUI_DIR / "main.py")])
+
+
+# @app.on_event("shutdown")
+# async def shutdown():
+#     subprocess.Popen(["pkill", "-f", (COMFYUI_DIR / "main.py")])
 
 
 class GenerateSchema(BaseModel):
@@ -49,4 +66,4 @@ app.include_router(dev_router)
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="localhost", port=8000)
