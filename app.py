@@ -92,8 +92,7 @@ async def schnell_generate_bulk(to_generate: list[GenerateSchema]):
 
 @app.get("/queue", response_model=QueueSchema)
 async def queue():
-    pass
-    # return get_queue_status()
+    return get_queue_status()
 
 
 @app.post("/download_files")
