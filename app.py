@@ -43,8 +43,8 @@ class GenerateSchema(BaseModel):
 
 
 class QueueSchema(BaseModel):
-    queue_pending: list[str]
-    queue_running: list[str]
+    queue_pending: int
+    queue_running: int
 
 
 @app.get("/health")
@@ -90,10 +90,14 @@ async def schnell_generate_bulk(to_generate: list[GenerateSchema]):
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-# @app.get("/queue", response_model=QueueSchema)
-@app.get("/queue")
+@app.get("/queue", response_model=QueueSchema)
 async def queue():
-    return get_queue_status()
+
+    queue_status = get_queue_status()
+    return QueueSchema(
+        queue_pending=len(queue_status["queue_pending"]),
+        queue_running=len(queue_status["queue_running"])
+    )
 
 
 @app.post("/download_files")
