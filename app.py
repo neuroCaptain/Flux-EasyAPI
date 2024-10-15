@@ -1,3 +1,4 @@
+from typing import Optional
 import os
 import zipfile
 from pathlib import Path
@@ -34,11 +35,11 @@ async def startup():
 
 class GenerateSchema(BaseModel):
     prompt: str
-    width: int = Field(default=None)
-    height: int = Field(default=None)
-    batch_size: int = Field(default=None, ge=1, le=20)
-    noise_seed: int = Field(default=None)
-    steps: int = Field(default=None, ge=1, le=30)
+    width: Optional[int] = Field(default=None)
+    height: Optional[int] = Field(default=None)
+    batch_size: Optional[int] = Field(default=None, ge=1, le=20)
+    noise_seed: Optional[int] = Field(default=None)
+    steps: Optional[int] = Field(default=None, ge=1, le=30)
 
 
 @app.get("/health")
@@ -48,12 +49,12 @@ async def health():
 
 @dev_router.post("/generate")
 async def dev_generate_bulk(to_generate: GenerateSchema):
-    generate("dev", to_generate.model_dump())
+    generate("dev", to_generate.model_dump(exclude_none=True))
 
 
 @schnell_router.post("/generate")
 async def schnell_generate_bulk(to_generate: GenerateSchema):
-    generate("schnell", to_generate.model_dump())
+    generate("schnell", to_generate.model_dump(exclude_none=True))
 
 
 @app.get("/queue")
@@ -63,19 +64,20 @@ async def queue():
 
 @app.post("/download_files")
 async def download_files():
-    # Create a unique name for the zip file
+
     zip_filename = TEMP_DIR / f"output_{uuid4()}.zip"
     
-    # Zip all the files in the OUTPUT_DIR
     with zipfile.ZipFile(zip_filename, 'w') as zipf:
         for root, dirs, files in os.walk(OUTPUT_DIR):
             for file in files:
                 file_path = Path(root) / file
-                # Add file to zip archive, keeping the relative path from OUTPUT_DIR
                 zipf.write(file_path, file_path.relative_to(OUTPUT_DIR))
-    
-    # Return the zip file as a downloadable response
-    return FileResponse(zip_filename, filename=zip_filename.name, media_type="application/zip")
+
+    return FileResponse(
+        zip_filename,
+        filename=zip_filename.name,
+        media_type="application/zip"
+    )
 
 
 app.include_router(schnell_router)

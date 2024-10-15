@@ -30,7 +30,7 @@ def queue_prompt(nodes):
     prompt = {"prompt": nodes}
     data = json.dumps(prompt).encode("utf-8")
     req = request.Request(f"{COMFYUI_BASE_URL}/prompt", data=data)
-    request.urlopen(req)
+    return request.urlopen(req)
 
 
 def prepare_schnell_workflow(
@@ -85,5 +85,5 @@ def generate(
     else:
         logger.error(f"Invalid model: {model}")
         return None
-    queue_prompt(workflow)
+    return queue_prompt(workflow)
 
