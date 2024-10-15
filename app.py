@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from fastapi import FastAPI, APIRouter, status, HTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel, Field
 import subprocess
 
@@ -50,6 +50,17 @@ class QueueSchema(BaseModel):
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.get("/output", response_class=HTMLResponse)
+async def display_png_files():
+    png_files = sorted([f for f in os.listdir(OUTPUT_DIR) if f.endswith('.png')])
+    html_content = "<html><body>"
+    for png_file in png_files:
+        image_url = f"/output/{png_file}"
+        html_content += f'<div><img src="{image_url}" alt="{png_file}" style="max-width:500px;"></div>'
+    html_content += "</body></html>"
+    return html_content
 
 
 @dev_router.post("/generate", status_code=status.HTTP_204_NO_CONTENT)
