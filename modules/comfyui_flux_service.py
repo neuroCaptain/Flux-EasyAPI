@@ -52,7 +52,7 @@ def prepare_schnell_workflow(
     steps: int = 4,
 ):
     logger.info("Preparing schnell workflow")
-    noise_seed = get_random_noise_seed() if noise_seed == 42 else noise_seed
+    noise_seed = get_random_noise_seed()
     workflow = load_workflow(WorkflowPaths.SCHNELL.value)
     workflow["5"]["inputs"]["width"] = width
     workflow["5"]["inputs"]["height"] = height
@@ -77,7 +77,7 @@ def prepare_dev_workflow(
     steps: int = 20,
 ):
     logger.info("Preparing dev workflow")
-    noise_seed = get_random_noise_seed() if noise_seed == 42 else noise_seed
+    noise_seed = get_random_noise_seed()
     workflow = load_workflow(WorkflowPaths.DEV.value)
     workflow["6"]["inputs"]["text"] = prompt
     workflow["27"]["inputs"]["width"] = width
