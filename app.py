@@ -1,5 +1,11 @@
+import os
+import zipfile
+from pathlib import Path
+from uuid import uuid4
+
 from fastapi import FastAPI, APIRouter
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 import subprocess
 
@@ -11,14 +17,14 @@ app = FastAPI()
 schnell_router = APIRouter(prefix="/schnell", tags=["schnell"])
 dev_router = APIRouter(prefix="/dev", tags=["dev"])
 
-# app.mount("/temp", StaticFiles(directory=TEMP_DIR), name="temp")
 app.mount("/output", StaticFiles(directory=OUTPUT_DIR), name="output")
 
-# @app.on_event("startup")
-# async def startup():
-#     if not (COMFYUI_DIR / "main.py").exists():
-#         raise Exception("ComfyUI not found")
-#     subprocess.Popen(["python", (COMFYUI_DIR / "main.py")])
+
+@app.on_event("startup")
+async def startup():
+    if not COMFYUI_DIR.exists():
+        raise FileNotFoundError("ComfyUI not found")
+    # subprocess.Popen(["python", (COMFYUI_DIR / "main.py")])
 
 
 # @app.on_event("shutdown")
@@ -57,7 +63,19 @@ async def queue():
 
 @app.post("/download_files")
 async def download_files():
-    pass
+    # Create a unique name for the zip file
+    zip_filename = TEMP_DIR / f"output_{uuid4()}.zip"
+    
+    # Zip all the files in the OUTPUT_DIR
+    with zipfile.ZipFile(zip_filename, 'w') as zipf:
+        for root, dirs, files in os.walk(OUTPUT_DIR):
+            for file in files:
+                file_path = Path(root) / file
+                # Add file to zip archive, keeping the relative path from OUTPUT_DIR
+                zipf.write(file_path, file_path.relative_to(OUTPUT_DIR))
+    
+    # Return the zip file as a downloadable response
+    return FileResponse(zip_filename, filename=zip_filename.name, media_type="application/zip")
 
 
 app.include_router(schnell_router)
