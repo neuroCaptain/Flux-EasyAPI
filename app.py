@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel, Field
 import subprocess
 
-from modules.comfyui_flux_service import generate, get_queue_status
+from modules.comfyui_flux_service import generate, get_queue_status, check_health
 from config import COMFYUI_DIR, OUTPUT_DIR, TEMP_DIR
 
 
@@ -25,12 +25,12 @@ app.mount("/output", StaticFiles(directory=OUTPUT_DIR), name="output")
 async def startup():
     if not COMFYUI_DIR.exists():
         raise FileNotFoundError("ComfyUI not found")
-    # subprocess.Popen(["python", (COMFYUI_DIR / "main.py")])
+    subprocess.Popen(["python", (COMFYUI_DIR / "main.py")])
 
 
-# @app.on_event("shutdown")
-# async def shutdown():
-#     subprocess.Popen(["pkill", "-f", (COMFYUI_DIR / "main.py")])
+@app.on_event("shutdown")
+async def shutdown():
+    subprocess.Popen(["pkill", "-f", (COMFYUI_DIR / "main.py")])
 
 
 class GenerateSchema(BaseModel):
@@ -49,6 +49,11 @@ class QueueSchema(BaseModel):
 
 @app.get("/health")
 async def health():
+    if not await check_health():
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="ComfyUI is not healthy"
+        )
     return {"status": "ok"}
 
 
@@ -66,7 +71,7 @@ async def display_png_files():
 @dev_router.post("/generate", status_code=status.HTTP_204_NO_CONTENT)
 async def dev_generate(to_generate: GenerateSchema):
     try:
-        generate("dev", **to_generate.model_dump(exclude_none=True))
+        await generate("dev", **to_generate.model_dump(exclude_none=True))
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -76,7 +81,7 @@ async def dev_generate(to_generate: GenerateSchema):
 async def dev_generate_bulk(to_generate: list[GenerateSchema]):
     try:
         for generate_schema in to_generate:
-            generate("dev", **generate_schema.model_dump(exclude_none=True))
+            await generate("dev", **generate_schema.model_dump(exclude_none=True))
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -85,7 +90,7 @@ async def dev_generate_bulk(to_generate: list[GenerateSchema]):
 @schnell_router.post("/generate", status_code=status.HTTP_204_NO_CONTENT)
 async def schnell_generate(to_generate: GenerateSchema):
     try:
-        generate("schnell", **to_generate.model_dump(exclude_none=True))
+        await generate("schnell", **to_generate.model_dump(exclude_none=True))
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -95,7 +100,7 @@ async def schnell_generate(to_generate: GenerateSchema):
 async def schnell_generate_bulk(to_generate: list[GenerateSchema]):
     try:
         for generate_schema in to_generate:
-            generate("schnell", **generate_schema.model_dump(exclude_none=True))
+            await generate("schnell", **generate_schema.model_dump(exclude_none=True))
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -103,8 +108,7 @@ async def schnell_generate_bulk(to_generate: list[GenerateSchema]):
 
 @app.get("/queue", response_model=QueueSchema)
 async def queue():
-
-    queue_status = get_queue_status()
+    queue_status = await get_queue_status()
     return QueueSchema(
         queue_pending=len(queue_status["queue_pending"]),
         queue_running=len(queue_status["queue_running"])
@@ -134,4 +138,4 @@ app.include_router(dev_router)
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="localhost", port=8000)
+    uvicorn.run("app:app", host="localhost", port=8000, reload=True)

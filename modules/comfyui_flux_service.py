@@ -1,9 +1,10 @@
 from enum import Enum
 import random
-
 import json
 from pathlib import Path
-from urllib import request
+
+from fastapi import HTTPException, status
+import aiohttp
 
 from config import COMFYUI_BASE_URL, WORKFLOWS_DIR
 from modules.logger import logger
@@ -31,16 +32,44 @@ def load_workflow(workflow_path: Path):
         return None
 
 
-def queue_prompt(nodes):
+async def queue_prompt(nodes):
     prompt = {"prompt": nodes}
     data = json.dumps(prompt).encode("utf-8")
-    req = request.Request(f"{COMFYUI_BASE_URL}/prompt", data=data)
-    request.urlopen(req)
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(f"{COMFYUI_BASE_URL}/prompt", data=data) as response:
+                response_json = await response.json()
+                response.raise_for_status()
+                return response_json
+    except aiohttp.ClientError as e:
+        logger.error(f"Failed to queue prompt: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to queue prompt: {e} {response_json}"
+        )
 
 
-def get_queue_status():
-    req = request.Request(f"{COMFYUI_BASE_URL}queue")
-    return json.loads(request.urlopen(req).read().decode("utf-8"))
+async def get_queue_status():
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"{COMFYUI_BASE_URL}/queue") as response:
+                return await response.json()
+    except aiohttp.ClientError as e:
+        logger.error(f"Failed to get queue status: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get queue status"
+        )
+
+
+async def check_health():
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"{COMFYUI_BASE_URL}") as response:
+                return response.status == 200
+    except aiohttp.ClientError as e:
+        logger.error(f"Failed to check health: {e}")
+        return False
 
 
 def prepare_schnell_workflow(
@@ -96,7 +125,7 @@ def prepare_dev_workflow(
     return workflow
 
 
-def generate(
+async def generate(
     model: str,
     prompt: str,
     **kwargs
@@ -114,5 +143,5 @@ def generate(
     else:
         logger.error(f"Invalid model: {model}")
         raise ValueError(f"Invalid model: {model}")
-    queue_prompt(workflow)
+    return await queue_prompt(workflow)
 
