@@ -38,6 +38,11 @@ def queue_prompt(nodes):
     request.urlopen(req)
 
 
+def get_queue_status():
+    req = request.Request(f"{COMFYUI_BASE_URL}/queue")
+    return json.loads(request.urlopen(req).read().decode("utf-8"))
+
+
 def prepare_schnell_workflow(
     prompt: str,
     width: int = 1920,

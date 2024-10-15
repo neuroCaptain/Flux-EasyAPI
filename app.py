@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 import subprocess
 
-from modules.comfyui_flux_service import generate
+from modules.comfyui_flux_service import generate, get_queue_status
 from config import COMFYUI_DIR, OUTPUT_DIR, TEMP_DIR
 
 
@@ -42,6 +42,11 @@ class GenerateSchema(BaseModel):
     steps: Optional[int] = Field(default=None, ge=1, le=30)
 
 
+class QueueSchema(BaseModel):
+    queue_pending: list[str]
+    queue_running: list[str]
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok"}
@@ -65,9 +70,9 @@ async def schnell_generate_bulk(to_generate: GenerateSchema):
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-@app.get("/queue")
+@app.get("/queue", response_model=QueueSchema)
 async def queue():
-    pass
+    return get_queue_status()
 
 
 @app.post("/download_files")
