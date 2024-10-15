@@ -53,7 +53,7 @@ async def health():
 
 
 @dev_router.post("/generate", status_code=status.HTTP_204_NO_CONTENT)
-async def dev_generate_bulk(to_generate: GenerateSchema):
+async def dev_generate(to_generate: GenerateSchema):
     try:
         generate("dev", **to_generate.model_dump(exclude_none=True))
     except ValueError as e:
@@ -61,8 +61,18 @@ async def dev_generate_bulk(to_generate: GenerateSchema):
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
+@dev_router.post("/generate/bulk", status_code=status.HTTP_204_NO_CONTENT)
+async def dev_generate_bulk(to_generate: list[GenerateSchema]):
+    try:
+        for generate_schema in to_generate:
+            generate("dev", **generate_schema.model_dump(exclude_none=True))
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
 @schnell_router.post("/generate", status_code=status.HTTP_204_NO_CONTENT)
-async def schnell_generate_bulk(to_generate: GenerateSchema):
+async def schnell_generate(to_generate: GenerateSchema):
     try:
         generate("schnell", **to_generate.model_dump(exclude_none=True))
     except ValueError as e:
@@ -70,9 +80,20 @@ async def schnell_generate_bulk(to_generate: GenerateSchema):
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
+@schnell_router.post("/generate/bulk", status_code=status.HTTP_204_NO_CONTENT)
+async def schnell_generate_bulk(to_generate: list[GenerateSchema]):
+    try:
+        for generate_schema in to_generate:
+            generate("schnell", **generate_schema.model_dump(exclude_none=True))
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
 @app.get("/queue", response_model=QueueSchema)
 async def queue():
-    return get_queue_status()
+    pass
+    # return get_queue_status()
 
 
 @app.post("/download_files")
