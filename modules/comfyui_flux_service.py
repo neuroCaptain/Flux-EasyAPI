@@ -14,6 +14,10 @@ class WorkflowPaths(Enum):
     SCHNELL = WORKFLOWS_DIR / "flux_schnell_workflow.json"
 
 
+def get_random_noise_seed() -> int:
+    return random.randint(0, 2**64)
+
+
 def load_workflow(workflow_path: Path):
     try:
         logger.info(f"Loading workflow from {workflow_path}")
@@ -39,10 +43,11 @@ def prepare_schnell_workflow(
     width: int = 1920,
     height: int = 1080,
     batch_size: int = 1,
-    noise_seed: int = random.randint(0, 2**64),
+    noise_seed: int = 42,
     steps: int = 4,
 ):
     logger.info("Preparing schnell workflow")
+    noise_seed = get_random_noise_seed() if noise_seed == 42 else noise_seed
     workflow = load_workflow(WorkflowPaths.SCHNELL.value)
     workflow["5"]["inputs"]["width"] = width
     workflow["5"]["inputs"]["height"] = height
@@ -63,10 +68,11 @@ def prepare_dev_workflow(
     width: int = 1920,
     height: int = 1080,
     batch_size: int = 1,
-    noise_seed: int = random.randint(0, 2**64),
+    noise_seed: int = 42,
     steps: int = 20,
 ):
     logger.info("Preparing dev workflow")
+    noise_seed = get_random_noise_seed() if noise_seed == 42 else noise_seed
     workflow = load_workflow(WorkflowPaths.DEV.value)
     workflow["6"]["inputs"]["text"] = prompt
     workflow["27"]["inputs"]["width"] = width
