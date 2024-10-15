@@ -16,6 +16,7 @@ class WorkflowPaths(Enum):
 
 def load_workflow(workflow_path: Path):
     try:
+        logger.info(f"Loading workflow from {workflow_path}")
         with open(workflow_path, 'r') as file:
             return json.load(file)
     except FileNotFoundError:
@@ -30,7 +31,7 @@ def queue_prompt(nodes):
     prompt = {"prompt": nodes}
     data = json.dumps(prompt).encode("utf-8")
     req = request.Request(f"{COMFYUI_BASE_URL}/prompt", data=data)
-    return request.urlopen(req)
+    request.urlopen(req)
 
 
 def prepare_schnell_workflow(
@@ -41,6 +42,7 @@ def prepare_schnell_workflow(
     noise_seed: int = random.randint(0, 2**64),
     steps: int = 4,
 ):
+    logger.info("Preparing schnell workflow")
     workflow = load_workflow(WorkflowPaths.SCHNELL.value)
     workflow["5"]["inputs"]["width"] = width
     workflow["5"]["inputs"]["height"] = height
@@ -48,6 +50,7 @@ def prepare_schnell_workflow(
     workflow["25"]["inputs"]["noise_seed"] = noise_seed
     workflow["17"]["inputs"]["steps"] = steps
     workflow["6"]["inputs"]["text"] = prompt
+    logger.info("Schnell workflow prepared")
     return workflow
 
 
@@ -59,6 +62,7 @@ def prepare_dev_workflow(
     noise_seed: int = random.randint(0, 2**64),
     steps: int = 20,
 ):
+    logger.info("Preparing dev workflow")
     workflow = load_workflow(WorkflowPaths.DEV.value)
     workflow["6"]["inputs"]["text"] = prompt
     workflow["27"]["inputs"]["width"] = width
@@ -68,6 +72,7 @@ def prepare_dev_workflow(
     workflow["30"]["inputs"]["height"] = height
     workflow["30"]["inputs"]["noise_seed"] = noise_seed
     workflow["17"]["inputs"]["steps"] = steps
+    logger.info("Dev workflow prepared")
     return workflow
 
 
@@ -76,6 +81,10 @@ def generate(
     prompt: str,
     **kwargs
 ):
+    logger.info(
+        f"Generating with model {model} "
+        f"with prompt: {prompt} and kwargs: {kwargs}"
+    )
     if model == "dev":
         workflow = prepare_dev_workflow(
             prompt, **kwargs)
@@ -84,6 +93,6 @@ def generate(
             prompt, **kwargs)
     else:
         logger.error(f"Invalid model: {model}")
-        return None
-    return queue_prompt(workflow)
+        raise ValueError(f"Invalid model: {model}")
+    queue_prompt(workflow)
 

@@ -4,7 +4,7 @@ import zipfile
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, status, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
@@ -47,14 +47,22 @@ async def health():
     return {"status": "ok"}
 
 
-@dev_router.post("/generate")
+@dev_router.post("/generate", status_code=status.HTTP_204_NO_CONTENT)
 async def dev_generate_bulk(to_generate: GenerateSchema):
-    generate("dev", to_generate.model_dump(exclude_none=True))
+    try:
+        generate("dev", to_generate.model_dump(exclude_none=True))
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-@schnell_router.post("/generate")
+@schnell_router.post("/generate", status_code=status.HTTP_204_NO_CONTENT)
 async def schnell_generate_bulk(to_generate: GenerateSchema):
-    generate("schnell", to_generate.model_dump(exclude_none=True))
+    try:
+        generate("schnell", to_generate.model_dump(exclude_none=True))
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @app.get("/queue")
@@ -64,9 +72,8 @@ async def queue():
 
 @app.post("/download_files")
 async def download_files():
-
     zip_filename = TEMP_DIR / f"output_{uuid4()}.zip"
-    
+
     with zipfile.ZipFile(zip_filename, 'w') as zipf:
         for root, dirs, files in os.walk(OUTPUT_DIR):
             for file in files:
