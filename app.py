@@ -90,7 +90,8 @@ async def schnell_generate_bulk(to_generate: list[GenerateSchema]):
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-@app.get("/queue", response_model=QueueSchema)
+# @app.get("/queue", response_model=QueueSchema)
+@app.get("/queue")
 async def queue():
     return get_queue_status()
 
