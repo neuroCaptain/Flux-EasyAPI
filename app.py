@@ -1,36 +1,39 @@
+from contextlib import asynccontextmanager
 from typing import Optional
 import os
 import zipfile
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import FastAPI, APIRouter, status, HTTPException
+from fastapi import FastAPI, APIRouter, status, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel, Field
 import subprocess
+from fastapi.templating import Jinja2Templates
 
-from modules.comfyui_flux_service import generate, get_queue_status, check_health
+from modules.comfyui_flux_service import (
+    generate,
+    get_queue_status,
+    check_health
+)
 from config import COMFYUI_DIR, OUTPUT_DIR, TEMP_DIR
 
 
-app = FastAPI()
-schnell_router = APIRouter(prefix="/schnell", tags=["schnell"])
-dev_router = APIRouter(prefix="/dev", tags=["dev"])
-
-app.mount("/output", StaticFiles(directory=OUTPUT_DIR), name="output")
-
-
-@app.on_event("startup")
-async def startup():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     if not COMFYUI_DIR.exists():
         raise FileNotFoundError("ComfyUI not found")
     subprocess.Popen(["python", (COMFYUI_DIR / "main.py")])
-
-
-@app.on_event("shutdown")
-async def shutdown():
+    yield
     subprocess.Popen(["pkill", "-f", (COMFYUI_DIR / "main.py")])
+
+
+app = FastAPI(lifespan=lifespan)
+templates = Jinja2Templates(directory="templates")
+app.mount("/output", StaticFiles(directory=OUTPUT_DIR), name="output")
+schnell_router = APIRouter(prefix="/schnell", tags=["schnell"])
+dev_router = APIRouter(prefix="/dev", tags=["dev"])
 
 
 class GenerateSchema(BaseModel):
@@ -57,15 +60,27 @@ async def health():
     return {"status": "ok"}
 
 
-@app.get("/output", response_class=HTMLResponse)
-async def display_png_files():
-    png_files = sorted([f for f in os.listdir(OUTPUT_DIR) if f.endswith('.png')])
-    html_content = "<html><body>"
-    for png_file in png_files:
-        image_url = f"/output/{png_file}"
-        html_content += f'<div><img src="{image_url}" alt="{png_file}" style="max-width:500px;"></div>'
-    html_content += "</body></html>"
-    return html_content
+@app.get("/images", response_class=HTMLResponse)
+async def read_images(request: Request):
+    try:
+        images = [
+            img for img in os.listdir(OUTPUT_DIR) if img.endswith(".png")
+        ]
+ 
+        return templates.TemplateResponse(
+            "images.html",
+            {"request": request, "images": images}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/images/{image_name}")
+async def get_image(image_name: str):
+    image_path = os.path.join(OUTPUT_DIR, image_name)
+    if os.path.exists(image_path):
+        return FileResponse(image_path)
+    raise HTTPException(status_code=404, detail="Image not found")
 
 
 @dev_router.post("/generate", status_code=status.HTTP_204_NO_CONTENT)
@@ -81,7 +96,10 @@ async def dev_generate(to_generate: GenerateSchema):
 async def dev_generate_bulk(to_generate: list[GenerateSchema]):
     try:
         for generate_schema in to_generate:
-            await generate("dev", **generate_schema.model_dump(exclude_none=True))
+            await generate(
+                "dev",
+                **generate_schema.model_dump(exclude_none=True)
+            )
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -100,7 +118,10 @@ async def schnell_generate(to_generate: GenerateSchema):
 async def schnell_generate_bulk(to_generate: list[GenerateSchema]):
     try:
         for generate_schema in to_generate:
-            await generate("schnell", **generate_schema.model_dump(exclude_none=True))
+            await generate(
+                "schnell",
+                **generate_schema.model_dump(exclude_none=True)
+            )
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
