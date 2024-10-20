@@ -17,7 +17,7 @@ from modules.comfyui_flux_service import (
     get_queue_status,
     check_health
 )
-from config import COMFYUI_DIR, OUTPUT_DIR, TEMP_DIR
+from config import COMFYUI_DIR, OUTPUT_DIR, TEMP_DIR, STATIC_DIR, TEMPLATES_DIR
 
 
 @asynccontextmanager
@@ -30,10 +30,15 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory=TEMPLATES_DIR)
 app.mount("/output", StaticFiles(directory=OUTPUT_DIR), name="output")
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 schnell_router = APIRouter(prefix="/schnell", tags=["schnell"])
 dev_router = APIRouter(prefix="/dev", tags=["dev"])
+views_router = APIRouter(
+    tags=["views"],
+    include_in_schema=False
+)
 
 
 class GenerateSchema(BaseModel):
@@ -60,7 +65,7 @@ async def health():
     return {"status": "ok"}
 
 
-@app.get("/images", response_class=HTMLResponse)
+@views_router.get("/images", response_class=HTMLResponse)
 async def read_images(request: Request):
     try:
         images = [
@@ -152,6 +157,7 @@ async def download_files():
     )
 
 
+app.include_router(views_router)
 app.include_router(schnell_router)
 app.include_router(dev_router)
 

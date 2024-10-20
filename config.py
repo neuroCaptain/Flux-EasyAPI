@@ -13,7 +13,8 @@ BASE_DIR = Path(__file__).resolve().parent
 TEMP_DIR = BASE_DIR / "temp"
 TEMP_DIR.mkdir(exist_ok=True)
 WORKFLOWS_DIR = BASE_DIR / "workflows"
-
+STATIC_DIR = Path(__file__).parent / "ui/static"
+TEMPLATES_DIR = Path(__file__).parent / "ui/templates"
 
 # ComfyUI
 COMFYUI_REPO = "https://github.com/comfyanonymous/ComfyUI"
