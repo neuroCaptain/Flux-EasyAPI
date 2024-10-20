@@ -1,6 +1,8 @@
 import argparse
 import subprocess
 import asyncio
+import os
+import time
 from pathlib import Path
 
 from config import (
@@ -46,6 +48,16 @@ def install_comfyui():
     logger.info("ComfyUI installed.")
 
 
+def check_api_token():
+    if os.getenv("HUGGINGFACE_TOKEN") is None:
+        logger.error(
+            "HUGGINGFACE_TOKEN is not set. You wont be able to "
+            "download FluxDev model. You have 5 seconds to set it or "
+            "ignore this message."
+        )
+        time.sleep(5)
+
+
 async def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -68,7 +80,19 @@ async def main():
         choices=["1", "2", "3", "4"],
         metavar="MODEL"
     )
+    parser.add_argument(
+        "-t",
+        "--token",
+        help="HUGGINGFACE_TOKEN to download FluxDev model.",
+    )
     args = parser.parse_args()
+
+    if args.token:
+        logger.info("Setting HUGGINGFACE_TOKEN...")
+        os.environ["HUGGINGFACE_TOKEN"] = args.token
+        logger.info("HUGGINGFACE_TOKEN set.")
+
+    check_api_token()
 
     upgrade_pip()
     install_requirements(BASE_REQUIREMENTS_FILE)
