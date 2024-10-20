@@ -66,7 +66,6 @@ async def read_images(request: Request):
         images = [
             img for img in os.listdir(OUTPUT_DIR) if img.endswith(".png")
         ]
- 
         return templates.TemplateResponse(
             "images.html",
             {"request": request, "images": images}

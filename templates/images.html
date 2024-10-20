@@ -11,6 +11,7 @@
             margin: 0;
             padding: 20px;
             background-color: #f4f4f4;
+            overflow: hidden; /* Prevent scrolling when lightbox is open */
         }
 
         h1 {
@@ -31,17 +32,24 @@
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             transition: transform 0.2s;
+            cursor: pointer; /* Change cursor to indicate clickable item */
+            width: 100%; /* Ensure full width for grid items */
+            max-width: 100%; /* Prevent overflow */
+            aspect-ratio: 1; /* Maintain aspect ratio */
         }
 
         .image-container img {
-            width: 100%;
-            height: auto;
+            width: auto; /* Allow width to be auto */
+            height: 100%; /* Full height */
+            max-width: none; /* Prevent max width limitation */
             border-radius: 8px;
             display: block;
+            transition: transform 0.3s; /* Smooth transition for zoom */
+            object-fit: contain; /* Contain images within the container */
         }
 
-        .image-container:hover {
-            transform: scale(1.05);
+        .image-container:hover img {
+            transform: scale(1.05); /* Zoom effect on hover */
         }
 
         .lightbox {
@@ -85,11 +93,11 @@
             {% for image in images %}
                 <div class="image-container">
                     <a href="#{{ image }}">
-                        <img src="/images/{{ image }}" alt="{{ image }}">
+                        <img src="/output/{{ image }}" alt="{{ image }}">
                     </a>
                     <div id="{{ image }}" class="lightbox">
                         <a href="#" class="close">&times;</a>
-                        <img src="/images/{{ image }}" alt="{{ image }}">
+                        <img src="/output/{{ image }}" alt="{{ image }}">
                     </div>
                 </div>
             {% endfor %}

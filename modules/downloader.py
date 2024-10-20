@@ -64,10 +64,11 @@ def clips_menu():
         "[1] FP16 (If you have more than 32GB RAM)\n"
         "[2] FP8 (If you have less than 32GB RAM)\n"
         "[3] All\n"
+        "[4] Skip\n"
     )
     print(clips_menu)
     choice = input("Enter your choice: ")
-    while choice not in ["1", "2", "3"]:
+    while choice not in ["1", "2", "3", "4"]:
         print("Invalid choice")
         choice = input("Enter your choice: ")
     if choice == "1":
@@ -77,6 +78,8 @@ def clips_menu():
     elif choice == "3":
         TO_DOWNLOAD.append(FP16)
         TO_DOWNLOAD.append(FP8)
+    elif choice == "4":
+        pass
 
 
 def models_menu():
@@ -85,10 +88,11 @@ def models_menu():
         "[1] FluxDev\n"
         "[2] FluxSchnell\n"
         "[3] All\n"
+        "[4] Skip\n"
     )
     print(models_menu)
     choice = input("Enter your choice: ")
-    while choice not in ["1", "2", "3"]:
+    while choice not in ["1", "2", "3", "4"]:
         print("Invalid choice")
         choice = input("Enter your choice: ")
     if choice == "1":
@@ -98,6 +102,8 @@ def models_menu():
     elif choice == "3":
         TO_DOWNLOAD.append(FluxDev)
         TO_DOWNLOAD.append(FluxSchnell)
+    elif choice == "4":
+        pass
 
 
 async def download(reinstall: bool = False):
