@@ -1,24 +1,28 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
-    {% if images %}
-        {% for image in images %}
-            <div class="col">
-                <div class="card">
-                    <a href="#{{ image }}" class="card-body text-center p-0">
-                        <img src="/images/{{ image }}" class="card-img-top" alt="{{ image }}" style="object-fit: contain; ">
-                    </a>
-                    <div id="{{ image }}" class="lightbox">
-                        <a href="#" class="close" style="position: absolute; top: 10px; right: 15px; color: white; font-size: 30px; text-decoration: none;">&times;</a>
-                        <img src="/images/{{ image }}" alt="{{ image }}">
+<div class="container">
+    <h1 class="text-center mb-2">Images</h1>
+    <a href="/docs" class="btn btn-success mb-2 mx-auto d-block">Docs</a>
+    <a href="/download_files" class="btn btn-primary mb-4 mx-auto d-block">Download ZIP</a>
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
+        {% if images %}
+            {% for image in images %}
+                <div class="col">
+                    <div class="card">
+                        <a href="#{{ image }}" class="card-body text-center p-0">
+                            <img src="/images/{{ image }}" class="card-img-top" alt="{{ image }}" style="object-fit: contain;">
+                        </a>
+                        <div id="{{ image }}" class="lightbox">
+                            <a href="#" class="close" style="position: absolute; top: 10px; right: 15px; color: white; font-size: 30px; text-decoration: none;">&times;</a>
+                            <img src="/images/{{ image }}" alt="{{ image }}">
+                        </div>
                     </div>
                 </div>
-            </div>
-        {% endfor %}
-    {% else %}
-        <h2 class="text-center">No PNG images found</h2>
-        <a href="/download" class="btn btn-primary">Download zip</a>
-    {% endif %}
+            {% endfor %}
+        {% else %}
+            <h2 class="text-center">No PNG images found</h2>
+        {% endif %}
+    </div>
 </div>
 {% endblock %}

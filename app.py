@@ -20,6 +20,38 @@ from modules.comfyui_flux_service import (
 from config import COMFYUI_DIR, OUTPUT_DIR, TEMP_DIR, STATIC_DIR, TEMPLATES_DIR
 
 
+# UTILS
+def read_images(request: Request):
+    images = [
+        img for img in os.listdir(OUTPUT_DIR) if img.endswith(".png")
+    ]
+    return images
+
+
+# Schemas
+class GenerateSchema(BaseModel):
+    prompt: str
+    width: Optional[int] = Field(default=None)
+    height: Optional[int] = Field(default=None)
+    batch_size: Optional[int] = Field(default=None, ge=1, le=20)
+    noise_seed: Optional[int] = Field(default=None)
+    steps: Optional[int] = Field(default=None, ge=1, le=30)
+
+
+class QueueSchema(BaseModel):
+    queue_pending: int
+    queue_running: int
+
+
+class ImageSchema(BaseModel):
+    image_name: str
+
+
+class ImagesSchema(BaseModel):
+    images: list[str]
+
+
+# APP
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if not COMFYUI_DIR.exists():
@@ -41,20 +73,6 @@ views_router = APIRouter(
 )
 
 
-class GenerateSchema(BaseModel):
-    prompt: str
-    width: Optional[int] = Field(default=None)
-    height: Optional[int] = Field(default=None)
-    batch_size: Optional[int] = Field(default=None, ge=1, le=20)
-    noise_seed: Optional[int] = Field(default=None)
-    steps: Optional[int] = Field(default=None, ge=1, le=30)
-
-
-class QueueSchema(BaseModel):
-    queue_pending: int
-    queue_running: int
-
-
 @app.get("/health")
 async def health():
     if not await check_health():
@@ -65,16 +83,22 @@ async def health():
     return {"status": "ok"}
 
 
-@views_router.get("/images", response_class=HTMLResponse)
-async def read_images(request: Request):
+@views_router.get("/", response_class=HTMLResponse)
+async def images_view(request: Request):
     try:
-        images = [
-            img for img in os.listdir(OUTPUT_DIR) if img.endswith(".png")
-        ]
+        images = read_images(request)
         return templates.TemplateResponse(
             "images.html",
             {"request": request, "images": images}
         )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/images", response_model=ImagesSchema)
+async def get_images(request: Request):
+    try:
+        return ImagesSchema(images=read_images(request))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -140,7 +164,7 @@ async def queue():
     )
 
 
-@app.post("/download_files")
+@app.get("/download_files")
 async def download_files():
     zip_filename = TEMP_DIR / f"output_{uuid4()}.zip"
 
