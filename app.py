@@ -184,10 +184,10 @@ async def delete_files():
     try:
         for file in os.listdir(OUTPUT_DIR):
             logger.info(f"Deleting {file}")
-            os.remove(os.path.join(OUTPUT_DIR, file))
+            (OUTPUT_DIR / file).unlink()
         for file in os.listdir(TEMP_DIR):
             logger.info(f"Deleting {file}")
-            os.remove(os.path.join(TEMP_DIR, file))
+            (TEMP_DIR / file).unlink()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -195,8 +195,8 @@ async def delete_files():
 @images_router.delete("/{image_name}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_image(image_name: str):
     try:
-        if os.path.exists(os.path.join(OUTPUT_DIR, image_name)):
-            os.remove(os.path.join(OUTPUT_DIR, image_name))
+        if (OUTPUT_DIR / image_name).exists():
+            (OUTPUT_DIR / image_name).unlink()
         else:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -216,9 +216,9 @@ async def get_images(request: Request):
 
 @images_router.get("/{image_name}", response_class=FileResponse)
 async def get_image(image_name: str):
-    image_path = os.path.join(OUTPUT_DIR, image_name)
-    if os.path.exists(image_path):
-        return FileResponse(image_path)
+    image_path = OUTPUT_DIR / image_name
+    if image_path.exists():
+        return await FileResponse(image_path)
     raise HTTPException(status_code=404, detail="Image not found")
 
 
