@@ -181,6 +181,18 @@ async def download_files():
     )
 
 
+@app.get("/delete_files")
+async def delete_files():
+    try:
+        for file in os.listdir(OUTPUT_DIR):
+            os.remove(os.path.join(OUTPUT_DIR, file))
+        for file in os.listdir(TEMP_DIR):
+            os.remove(os.path.join(TEMP_DIR, file))
+        return {"status": "ok"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 app.include_router(views_router)
 app.include_router(schnell_router)
 app.include_router(dev_router)
