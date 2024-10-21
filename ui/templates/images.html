@@ -2,51 +2,52 @@
 
 {% block content %}
 
-    <h1 class="text-center mb-2">Images</h1>
-    <div class="card shadow-sm mb-4">
-        <div class="row p-4">
-            <!-- Left column for Queue Status -->
-            <div class="col-md-6">
-                <div class="queue-status text-center">
-                    <h3>Queue Status</h3>
-                    <p id="queue-pending">Pending: 0</p>
-                    <p id="queue-running">Running: 0</p>
-                </div>
-            </div>
-    
-            <!-- Right column for Buttons -->
-            <div class="col-md-6 d-grid gap-2">
-                <a href="/docs" class="btn btn-success">Docs</a>
-                <a href="/download_files" class="btn btn-primary">Download ZIP</a>
-                <button class="btn btn-danger" id="delete-btn" data-url="/delete_files">Delete all files</button>
+<h1 class="text-center mb-2">Images</h1>
+<div class="card shadow-sm mb-4">
+    <div class="row p-4">
+        <!-- Left column for Queue Status -->
+        <div class="col-md-6">
+            <div class="queue-status text-center">
+                <h3>Queue Status</h3>
+                <p id="queue-pending">Pending: 0</p>
+                <p id="queue-running">Running: 0</p>
             </div>
         </div>
-    </div>
 
-    <!-- Image grid -->
-    <div class="card shadow-sm">
-        <div class="row p-4 row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
-            {% if images %}
-                {% for image in images %}
-                    <div class="col">
-                        <div class="card">
-                            <a href="#{{ image }}" class="card-body text-center p-0 lightbox-trigger">
-                                <img src="/images/{{ image }}" class="card-img-top" alt="{{ image }}" style="object-fit: contain;">
-                            </a>
-                            <div id="{{ image }}" class="lightbox" style="display: none;">
-                                <a href="#" class="close" style="position: absolute; top: 10px; right: 15px; color: white; font-size: 30px; text-decoration: none;">&times;</a>
-                                <img src="/images/{{ image }}" alt="{{ image }}">
-                            </div>
+        <!-- Right column for Buttons -->
+        <div class="col-md-6 d-grid gap-2">
+            <a href="/docs" class="btn btn-success">Docs</a>
+            <a href="/download_files" class="btn btn-primary">Download ZIP</a>
+            <button class="btn btn-danger" id="delete-btn" data-url="/delete_files">Delete all files</button>
+        </div>
+    </div>
+</div>
+
+<!-- Image grid -->
+<div class="card shadow-sm">
+    <div class="card-header">
+        <h2>Images count: <span id="image-count">{{ images|length }}</span></h2>
+    </div>
+    <div id="image-grid" class="row p-4 row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
+        {% if images %}
+            {% for image in images %}
+                <div class="col">
+                    <div class="card">
+                        <a href="#{{ image }}" class="card-body text-center p-0 lightbox-trigger">
+                            <img src="/images/{{ image }}" class="card-img-top" alt="{{ image }}" style="object-fit: contain;">
+                        </a>
+                        <div id="{{ image }}" class="lightbox" style="display: none;">
+                            <a href="#" class="close" style="position: absolute; top: 10px; right: 15px; color: white; font-size: 30px; text-decoration: none;">&times;</a>
+                            <img src="/images/{{ image }}" alt="{{ image }}">
                         </div>
                     </div>
-                {% endfor %}
-            {% else %}
-                <h2 class="text-center">No PNG images found</h2>
-            {% endif %}
-        </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <h2 class="text-center" id="no-images-message">No images found</h2>
+        {% endif %}
     </div>
-
-
+</div>
 
 <script>
     // Function to open the lightbox
@@ -59,23 +60,30 @@
         lightbox.style.display = 'none'; // Hide the lightbox
     }
 
-    // Add event listeners to open the lightbox
-    document.querySelectorAll('.lightbox-trigger').forEach(function(trigger) {
-        trigger.addEventListener('click', function(event) {
-            event.preventDefault(); // Prevent default anchor behavior
-            const lightbox = this.parentElement.querySelector('.lightbox');
-            openLightbox(lightbox); // Open the corresponding lightbox
+    // Function to add lightbox functionality to all images
+    function addLightboxListeners() {
+        document.querySelectorAll('.lightbox-trigger').forEach(function(trigger) {
+            trigger.addEventListener('click', function(event) {
+                event.preventDefault(); // Prevent default anchor behavior
+                const lightbox = this.parentElement.querySelector('.lightbox');
+                openLightbox(lightbox); // Open the corresponding lightbox
+            });
         });
-    });
 
-    // Add event listeners to close the lightbox
-    document.querySelectorAll('.lightbox .close').forEach(function(closeButton) {
-        closeButton.addEventListener('click', function(event) {
-            event.preventDefault(); // Prevent default anchor behavior
-            const lightbox = this.closest('.lightbox');
-            closeLightbox(lightbox); // Close the corresponding lightbox
+        document.querySelectorAll('.lightbox .close').forEach(function(closeButton) {
+            closeButton.addEventListener('click', function(event) {
+                event.preventDefault(); // Prevent default anchor behavior
+                const lightbox = this.closest('.lightbox');
+                closeLightbox(lightbox); // Close the corresponding lightbox
+            });
         });
-    });
+    }
+
+    // Update image count directly based on the number of images fetched from the server
+    function updateImageCount(newCount) {
+        const imageCountElement = document.getElementById('image-count');
+        imageCountElement.innerText = newCount;
+    }
 
     // Delete button logic
     document.getElementById('delete-btn').addEventListener('click', function(event) {
@@ -113,10 +121,59 @@
         });
     }
 
-    // Start polling every 4 seconds
-    setInterval(fetchQueueStatus, 4000);
+    const fetchQueueInterval = 20000;
 
-    // Initial call to populate queue status immediately
+    // Polling for new images every 20 seconds
+    function fetchNewImages() {
+        fetch('/images')
+        .then(response => response.json())
+        .then(data => {
+            const imageGrid = document.getElementById('image-grid');
+            const noImagesMessage = document.getElementById('no-images-message');
+            const currentImages = Array.from(imageGrid.querySelectorAll('img')).map(img => img.getAttribute('src').split('/').pop());
+
+            // Update the image count with the length of images from the server
+            updateImageCount(data.images.length);
+
+            data.images.forEach(image => {
+                if (!currentImages.includes(image)) {
+                    const col = document.createElement('div');
+                    col.className = 'col';
+                    col.innerHTML = `
+                        <div class="card">
+                            <a href="#${image}" class="card-body text-center p-0 lightbox-trigger">
+                                <img src="/images/${image}" class="card-img-top" alt="${image}" style="object-fit: contain;">
+                            </a>
+                            <div id="${image}" class="lightbox" style="display: none;">
+                                <a href="#" class="close" style="position: absolute; top: 10px; right: 15px; color: white; font-size: 30px; text-decoration: none;">&times;</a>
+                                <img src="/images/${image}" alt="${image}">
+                            </div>
+                        </div>`;
+                    imageGrid.appendChild(col);
+
+                    // Remove the "No images found" message if present
+                    if (noImagesMessage) {
+                        noImagesMessage.remove();
+                    }
+
+                    // Attach lightbox listeners for the new images
+                    addLightboxListeners();
+                }
+            });
+        })
+        .catch(error => {
+            console.error('Error fetching images:', error);
+        });
+    }
+
+    // Start polling for new images every 20 seconds
+    setInterval(fetchNewImages, fetchQueueInterval);
+
+    // Initial call to populate queue status and images immediately
     fetchQueueStatus();
+    fetchNewImages();
+
+    // Attach lightbox functionality to initially loaded images
+    addLightboxListeners();
 </script>
 {% endblock %}
