@@ -73,20 +73,11 @@ app.mount("/output", StaticFiles(directory=OUTPUT_DIR), name="output")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 schnell_router = APIRouter(prefix="/schnell", tags=["schnell"])
 dev_router = APIRouter(prefix="/dev", tags=["dev"])
+images_router = APIRouter(prefix="/images", tags=["images"])
 views_router = APIRouter(
     tags=["views"],
     include_in_schema=False
 )
-
-
-@app.get("/health")
-async def health():
-    if not await check_health():
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="ComfyUI is not healthy"
-        )
-    return {"status": "ok"}
 
 
 @views_router.get("/", response_class=HTMLResponse)
@@ -101,20 +92,23 @@ async def images_view(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/images", response_model=ImagesSchema)
-async def get_images(request: Request):
-    try:
-        return ImagesSchema(images=read_images(request))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@app.get("/health")
+async def health():
+    if not await check_health():
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="ComfyUI is not healthy"
+        )
+    return {"status": "ok"}
 
 
-@app.get("/images/{image_name}")
-async def get_image(image_name: str):
-    image_path = os.path.join(OUTPUT_DIR, image_name)
-    if os.path.exists(image_path):
-        return FileResponse(image_path)
-    raise HTTPException(status_code=404, detail="Image not found")
+@app.get("/queue", response_model=QueueSchema)
+async def queue():
+    queue_status = await get_queue_status()
+    return QueueSchema(
+        queue_pending=len(queue_status["queue_pending"]),
+        queue_running=len(queue_status["queue_running"])
+    )
 
 
 @dev_router.post("/generate", status_code=status.HTTP_204_NO_CONTENT)
@@ -161,16 +155,7 @@ async def schnell_generate_bulk(to_generate: list[GenerateSchema]):
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-@app.get("/queue", response_model=QueueSchema)
-async def queue():
-    queue_status = await get_queue_status()
-    return QueueSchema(
-        queue_pending=len(queue_status["queue_pending"]),
-        queue_running=len(queue_status["queue_running"])
-    )
-
-
-@app.get("/download_files")
+@images_router.get("/download_all", response_class=FileResponse)
 async def download_files():
     zip_filename = TEMP_DIR / f"output_{uuid4()}.zip"
 
@@ -188,7 +173,13 @@ async def download_files():
     )
 
 
-@app.delete("/delete_files", status_code=status.HTTP_204_NO_CONTENT)
+@images_router.get("/download/{image_name}")
+async def download_image(image_name: str):
+    image_path = os.path.join(OUTPUT_DIR, image_name)
+    return FileResponse(image_path)
+
+
+@images_router.delete("", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_files():
     try:
         for file in os.listdir(OUTPUT_DIR):
@@ -201,9 +192,40 @@ async def delete_files():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@images_router.delete("/{image_name}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_image(image_name: str):
+    try:
+        if os.path.exists(os.path.join(OUTPUT_DIR, image_name)):
+            os.remove(os.path.join(OUTPUT_DIR, image_name))
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Image {image_name} not found"
+            )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@images_router.get("", response_model=ImagesSchema)
+async def get_images(request: Request):
+    try:
+        return ImagesSchema(images=read_images(request))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@images_router.get("/{image_name}", response_class=FileResponse)
+async def get_image(image_name: str):
+    image_path = os.path.join(OUTPUT_DIR, image_name)
+    if os.path.exists(image_path):
+        return FileResponse(image_path)
+    raise HTTPException(status_code=404, detail="Image not found")
+
+
 app.include_router(views_router)
 app.include_router(schnell_router)
 app.include_router(dev_router)
+app.include_router(images_router)
 
 
 if __name__ == "__main__":
