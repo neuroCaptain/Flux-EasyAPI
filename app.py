@@ -188,7 +188,7 @@ async def download_files():
     )
 
 
-@app.get("/delete_files", status_code=status.HTTP_204_NO_CONTENT)
+@app.delete("/delete_files", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_files():
     try:
         for file in os.listdir(OUTPUT_DIR):
