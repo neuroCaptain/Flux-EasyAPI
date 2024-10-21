@@ -17,6 +17,7 @@ from modules.comfyui_flux_service import (
     get_queue_status,
     check_health
 )
+from modules.logger import logger
 from config import COMFYUI_DIR, OUTPUT_DIR, TEMP_DIR, STATIC_DIR, TEMPLATES_DIR
 
 
@@ -55,10 +56,15 @@ class ImagesSchema(BaseModel):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if not COMFYUI_DIR.exists():
+        logger.error("ComfyUI not found")
         raise FileNotFoundError("ComfyUI not found")
+    logger.info("Starting ComfyUI...")
     subprocess.Popen(["python", (COMFYUI_DIR / "main.py")])
+    logger.info("ComfyUI started")
     yield
+    logger.info("Stopping ComfyUI...")
     subprocess.Popen(["pkill", "-f", (COMFYUI_DIR / "main.py")])
+    logger.info("ComfyUI stopped")
 
 
 app = FastAPI(lifespan=lifespan)
@@ -170,10 +176,11 @@ async def download_files():
 
     with zipfile.ZipFile(zip_filename, 'w') as zipf:
         for root, dirs, files in os.walk(OUTPUT_DIR):
+            logger.info(f"Files in {root}: {files}")
             for file in files:
                 file_path = Path(root) / file
                 zipf.write(file_path, file_path.relative_to(OUTPUT_DIR))
-
+    logger.info(f"Downloading {zip_filename}")
     return FileResponse(
         zip_filename,
         filename=zip_filename.name,
@@ -181,14 +188,15 @@ async def download_files():
     )
 
 
-@app.get("/delete_files")
+@app.get("/delete_files", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_files():
     try:
         for file in os.listdir(OUTPUT_DIR):
+            logger.info(f"Deleting {file}")
             os.remove(os.path.join(OUTPUT_DIR, file))
         for file in os.listdir(TEMP_DIR):
+            logger.info(f"Deleting {file}")
             os.remove(os.path.join(TEMP_DIR, file))
-        return {"status": "ok"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
