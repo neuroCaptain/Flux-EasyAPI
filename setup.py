@@ -61,10 +61,9 @@ def check_api_token():
 async def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-r",
-        "--reinstall",
-        help="Reinstall the models if they are already present.",
-        action="store_true"
+        "-t",
+        "--token",
+        help="HUGGINGFACE_TOKEN to download FluxDev model.",
     )
     parser.add_argument(
         "-m",
@@ -81,9 +80,10 @@ async def main():
         metavar="MODEL"
     )
     parser.add_argument(
-        "-t",
-        "--token",
-        help="HUGGINGFACE_TOKEN to download FluxDev model.",
+        "-r",
+        "--reinstall",
+        help="Reinstall the models if they are already present.",
+        action="store_true"
     )
     parser.add_argument(
         "-l",
@@ -103,7 +103,9 @@ async def main():
         os.environ["HUGGINGFACE_TOKEN"] = args.token
         logger.info("HUGGINGFACE_TOKEN set.")
 
-    check_api_token()
+    if not args.local:
+        check_api_token()
+
     upgrade_pip()
     if not check_comfyui():
         install_comfyui()

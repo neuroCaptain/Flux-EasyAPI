@@ -9,7 +9,7 @@ def copy_local_models_from_dir(path: Path):
     logger.info(f"Finding local models in {path}...")
     tasks = []
     for model in Models:
-        if (path / model.NAME).exists():
+        if (path / model.value.NAME).exists():
             logger.info(f"Model {model.NAME} found.")
             tasks.append(model)
 
