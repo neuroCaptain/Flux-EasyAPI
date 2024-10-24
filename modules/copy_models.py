@@ -5,7 +5,8 @@ from config import Models
 from modules.logger import logger
 
 
-def copy_local_models_from_dir(path: Path):
+def copy_local_models_from_dir(path: str):
+    path = Path(path)
     logger.info(f"Finding local models in {path}...")
     tasks = []
     for model in Models:
