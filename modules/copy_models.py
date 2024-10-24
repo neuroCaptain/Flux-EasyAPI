@@ -22,6 +22,10 @@ def copy_local_models_from_dir(path: str):
 
     for model in tasks:
         logger.info(f"Copying {model.value.NAME} to {model.value.PATH}...")
-        shutil.copy(path / model.value.NAME, model.value.PATH)
+        to_copy_path = path / model.value.NAME
+        if to_copy_path.exists():
+            logger.error(f"Model {model.value.NAME} already exists.")      
+            continue
+        shutil.copy(to_copy_path, model.value.PATH)
         logger.info(f"Copied {model.value.NAME} to {model.value.PATH}")
     logger.info(f"Copied {len(tasks)} models successfully.")
