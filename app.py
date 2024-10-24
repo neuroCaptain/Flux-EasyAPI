@@ -229,7 +229,7 @@ async def get_images(request: Request):
 async def get_image(image_name: str):
     image_path = OUTPUT_DIR / image_name
     if image_path.exists():
-        return await FileResponse(image_path)
+        return FileResponse(image_path)
     raise HTTPException(status_code=404, detail="Image not found")
 
 
