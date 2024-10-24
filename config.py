@@ -1,12 +1,16 @@
 import os
 from enum import Enum
+from dataclasses import dataclass
 from pathlib import Path
 
 from dotenv import load_dotenv
 
+
 load_dotenv()
 
-HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
+
+def get_huggingface_token():
+    return os.getenv("HUGGINGFACE_TOKEN")
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -35,37 +39,41 @@ BASE_REQUIREMENTS_FILE = BASE_DIR / "requirements.txt"
 COMFYUI_REQUIREMENTS_FILE = COMFYUI_DIR / "requirements.txt"
 
 
-class ClipL(Enum):
-    URL = "https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/clip_l.safetensors"  # noqa: E501
-    NAME = "clip_l.safetensors"
-    PATH = CLIP_DIR / NAME
+@dataclass
+class Model:
+    URL: str
+    NAME: str
+    PATH: Path
 
 
-class FP16(Enum):
-    URL = "https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/t5xxl_fp16.safetensors"  # noqa: E501
-    NAME = "t5xxl_fp16.safetensors"
-    PATH = CLIP_DIR / NAME
-
-
-class FP8(Enum):
-    URL = "https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/t5xxl_fp8_e4m3fn.safetensors"  # noqa: E501
-    NAME = "t5xxl_fp8_e4m3fn.safetensors"
-    PATH = CLIP_DIR / NAME
-
-
-class VAE(Enum):
-    URL = "https://huggingface.co/black-forest-labs/FLUX.1-schnell/resolve/main/ae.safetensors"  # noqa: E501
-    NAME = "ae.safetensors"
-    PATH = VAE_DIR / NAME
-
-
-class FluxDev(Enum):
-    URL = "https://huggingface.co/black-forest-labs/FLUX.1-dev/resolve/main/flux1-dev.safetensors"  # noqa: E501
-    NAME = "flux1-dev.safetensors"
-    PATH = UNET_DIR / NAME
-
-
-class FluxSchnell(Enum):
-    URL = "https://huggingface.co/black-forest-labs/FLUX.1-schnell/resolve/main/flux1-schnell.safetensors"  # noqa: E501
-    NAME = "flux1-schnell.safetensors"
-    PATH = UNET_DIR / NAME
+class Models(Enum):
+    CLIPL = Model(
+        URL="https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/clip_l.safetensors",  # noqa: E501
+        NAME="clip_l.safetensors",
+        PATH=CLIP_DIR / "clip_l.safetensors"
+    )
+    FP16 = Model(
+        URL="https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/t5xxl_fp16.safetensors",  # noqa: E501
+        NAME="t5xxl_fp16.safetensors",
+        PATH=CLIP_DIR / "t5xxl_fp16.safetensors"
+    )
+    FP8 = Model(
+        URL="https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/t5xxl_fp8_e4m3fn.safetensors",  # noqa: E501
+        NAME="t5xxl_fp8_e4m3fn.safetensors",
+        PATH=CLIP_DIR / "t5xxl_fp8_e4m3fn.safetensors"
+    )
+    VAE = Model(
+        URL="https://huggingface.co/black-forest-labs/FLUX.1-schnell/resolve/main/ae.safetensors",  # noqa: E501
+        NAME="ae.safetensors",
+        PATH=VAE_DIR / "ae.safetensors"
+    )
+    FLUX_DEV = Model(
+        URL="https://huggingface.co/black-forest-labs/FLUX.1-dev/resolve/main/flux1-dev.safetensors",  # noqa: E501
+        NAME="flux1-dev.safetensors",
+        PATH=UNET_DIR / "flux1-dev.safetensors"
+    )
+    FLUX_SCHNELL = Model(
+        URL="https://huggingface.co/black-forest-labs/FLUX.1-schnell/resolve/main/flux1-schnell.safetensors",  # noqa: E501
+        NAME="flux1-schnell.safetensors",
+        PATH=UNET_DIR / "flux1-schnell.safetensors"
+    )

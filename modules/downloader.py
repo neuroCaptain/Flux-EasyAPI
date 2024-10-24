@@ -5,18 +5,10 @@ import aiohttp
 from tqdm import tqdm
 
 from modules.logger import logger
-from config import (
-    HUGGINGFACE_TOKEN,
-    ClipL,
-    VAE,
-    FP16,
-    FP8,
-    FluxDev,
-    FluxSchnell,
-)
+from config import get_huggingface_token, Models
 
 
-TO_DOWNLOAD = [VAE, ClipL]
+TO_DOWNLOAD = [Models.VAE.value, Models.CLIPL.value]
 
 
 async def download_model(url: str, destination_path: Path):
@@ -26,7 +18,7 @@ async def download_model(url: str, destination_path: Path):
             trust_env=True,
             connector=aiohttp.TCPConnector(ssl=False),
             timeout=timeout,
-            headers={"Authorization": f"Bearer {HUGGINGFACE_TOKEN}"},
+            headers={"Authorization": f"Bearer {get_huggingface_token()}"},
         ) as session:
             async with session.get(url) as response:
                 if response.status == 200:
@@ -72,12 +64,12 @@ def clips_menu():
         print("Invalid choice")
         choice = input("Enter your choice: ")
     if choice == "1":
-        TO_DOWNLOAD.append(FP16)
+        TO_DOWNLOAD.append(Models.FP16.value)
     elif choice == "2":
-        TO_DOWNLOAD.append(FP8)
+        TO_DOWNLOAD.append(Models.FP8.value)
     elif choice == "3":
-        TO_DOWNLOAD.append(FP16)
-        TO_DOWNLOAD.append(FP8)
+        TO_DOWNLOAD.append(Models.FP16.value)
+        TO_DOWNLOAD.append(Models.FP8.value)
     elif choice == "4":
         pass
 
@@ -96,12 +88,12 @@ def models_menu():
         print("Invalid choice")
         choice = input("Enter your choice: ")
     if choice == "1":
-        TO_DOWNLOAD.append(FluxDev)
+        TO_DOWNLOAD.append(Models.FLUX_DEV.value)
     elif choice == "2":
-        TO_DOWNLOAD.append(FluxSchnell)
+        TO_DOWNLOAD.append(Models.FLUX_SCHNELL.value)
     elif choice == "3":
-        TO_DOWNLOAD.append(FluxDev)
-        TO_DOWNLOAD.append(FluxSchnell)
+        TO_DOWNLOAD.append(Models.FLUX_DEV.value)
+        TO_DOWNLOAD.append(Models.FLUX_SCHNELL.value)
     elif choice == "4":
         pass
 
@@ -109,8 +101,8 @@ def models_menu():
 async def download(reinstall: bool = False):
     tasks = []
     for model in TO_DOWNLOAD:
-        if model.PATH.value.exists():
-            logger.info(f"{model.NAME.value} already exists.")
+        if model.PATH.exists():
+            logger.info(f"{model.NAME} already exists.")
             if not reinstall:
                 print("Do you want to download it again?")
                 choice = input("Enter your choice (y/n): ")
@@ -118,13 +110,13 @@ async def download(reinstall: bool = False):
                     print("Invalid choice")
                     choice = input("Enter your choice (y/n): ")
             else:
-                logger.info(f"{model.NAME.value} will be reinstalled.")
+                logger.info(f"{model.NAME} will be reinstalled.")
                 choice = "y"
             if choice == "y":
-                model.PATH.value.unlink()
-                tasks.append(download_model(model.URL.value, model.PATH.value))
+                model.PATH.unlink()
+                tasks.append(download_model(model.URL, model.PATH))
         else:
-            tasks.append(download_model(model.URL.value, model.PATH.value))
+            tasks.append(download_model(model.URL, model.PATH))
     await asyncio.gather(*tasks)
 
 
@@ -136,13 +128,13 @@ async def downloader(choices: set[str] | None = None, reinstall: bool = False):
         logger.info("Silently downloading models...")
         for choice in choices:
             if choice == "1":
-                TO_DOWNLOAD.append(FP16)
+                TO_DOWNLOAD.append(Models.FP16.value)
             elif choice == "2":
-                TO_DOWNLOAD.append(FP8)
+                TO_DOWNLOAD.append(Models.FP8.value)
             elif choice == "3":
-                TO_DOWNLOAD.append(FluxDev)
+                TO_DOWNLOAD.append(Models.FLUX_DEV.value)
             elif choice == "4":
-                TO_DOWNLOAD.append(FluxSchnell)
+                TO_DOWNLOAD.append(Models.FLUX_SCHNELL.value)
     await download(reinstall)
 
 

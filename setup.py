@@ -7,11 +7,11 @@ from pathlib import Path
 
 from config import (
     COMFYUI_DIR,
-    BASE_REQUIREMENTS_FILE,
     COMFYUI_REQUIREMENTS_FILE,
 )
-from modules.downloader import downloader
 from modules.logger import logger
+from modules.downloader import downloader
+from modules.copy_models import copy_local_models_from_dir
 
 
 def upgrade_pip():
@@ -50,10 +50,10 @@ def install_comfyui():
 
 def check_api_token():
     if os.getenv("HUGGINGFACE_TOKEN") is None:
-        logger.error(
+        logger.warning(
             "HUGGINGFACE_TOKEN is not set. You wont be able to "
-            "download FluxDev model. You have 5 seconds to set it or "
-            "ignore this message."
+            "download FluxDev model. You have 5 seconds to stop installation "
+            "to set it or ignore this message."
         )
         time.sleep(5)
 
@@ -85,6 +85,17 @@ async def main():
         "--token",
         help="HUGGINGFACE_TOKEN to download FluxDev model.",
     )
+    parser.add_argument(
+        "-l",
+        "--local",
+        help=(
+            "Specify the path to local models. "
+            "This overrides --reinstall and --models arguments, "
+            "copying models from the specified folder to ComfyUI's models "
+            "directory."
+        ),
+        metavar="PATH"
+    )
     args = parser.parse_args()
 
     if args.token:
@@ -93,13 +104,14 @@ async def main():
         logger.info("HUGGINGFACE_TOKEN set.")
 
     check_api_token()
-
     upgrade_pip()
-    install_requirements(BASE_REQUIREMENTS_FILE)
     if not check_comfyui():
         install_comfyui()
-    install_requirements(COMFYUI_REQUIREMENTS_FILE)
-    await downloader(args.models, args.reinstall)
+        install_requirements(COMFYUI_REQUIREMENTS_FILE)
+    if args.local:
+        copy_local_models_from_dir(args.local)
+    else:
+        await downloader(args.models, args.reinstall)
 
 
 if __name__ == "__main__":
