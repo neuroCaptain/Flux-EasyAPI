@@ -18,7 +18,14 @@ from modules.comfyui_flux_service import (
     check_health
 )
 from modules.logger import logger
-from config import COMFYUI_DIR, OUTPUT_DIR, TEMP_DIR, STATIC_DIR, TEMPLATES_DIR
+from config import (
+    COMFYUI_DIR,
+    OUTPUT_DIR,
+    TEMP_DIR,
+    STATIC_DIR,
+    TEMPLATES_DIR,
+    Models,
+)
 
 
 # UTILS
@@ -114,6 +121,7 @@ async def queue():
 @dev_router.post("/generate", status_code=status.HTTP_204_NO_CONTENT)
 async def dev_generate(to_generate: GenerateSchema):
     try:
+        # TODO: Add check that models are downloaded
         await generate("dev", **to_generate.model_dump(exclude_none=True))
     except ValueError as e:
         raise HTTPException(
@@ -123,6 +131,7 @@ async def dev_generate(to_generate: GenerateSchema):
 @dev_router.post("/generate/bulk", status_code=status.HTTP_204_NO_CONTENT)
 async def dev_generate_bulk(to_generate: list[GenerateSchema]):
     try:
+        # TODO: Add check that models are downloaded
         for generate_schema in to_generate:
             await generate(
                 "dev",
@@ -136,6 +145,7 @@ async def dev_generate_bulk(to_generate: list[GenerateSchema]):
 @schnell_router.post("/generate", status_code=status.HTTP_204_NO_CONTENT)
 async def schnell_generate(to_generate: GenerateSchema):
     try:
+        # TODO: Add check that models are downloaded
         await generate("schnell", **to_generate.model_dump(exclude_none=True))
     except ValueError as e:
         raise HTTPException(
@@ -145,6 +155,7 @@ async def schnell_generate(to_generate: GenerateSchema):
 @schnell_router.post("/generate/bulk", status_code=status.HTTP_204_NO_CONTENT)
 async def schnell_generate_bulk(to_generate: list[GenerateSchema]):
     try:
+        # TODO: Add check that models are downloaded
         for generate_schema in to_generate:
             await generate(
                 "schnell",
