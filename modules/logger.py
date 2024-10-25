@@ -1,5 +1,6 @@
 import logging
 
+
 COMFYUI_LEVEL = 21
 COMFYUI_ERROR_LEVEL = 31
 logging.addLevelName(COMFYUI_LEVEL, "COMFYUI")
@@ -22,7 +23,6 @@ class ColoredFormatter(logging.Formatter):
 
     def format(self, record):
         log_color = self.COLORS.get(record.levelname.strip("[]"), self.COLORS['RESET'])
-        # Format level name with padding inside the brackets
         levelname_padded = f"{log_color}{record.levelname:<{PADDING}}{self.COLORS['RESET']}"
         record.levelname = levelname_padded
         return super().format(record)

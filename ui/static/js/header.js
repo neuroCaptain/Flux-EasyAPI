@@ -1,29 +1,26 @@
-    // Function to fetch API health status and update the UI
-    function fetchAPIHealthStatus() {
-        fetch('/health')
-        .then(response => response.json())
-        .then(data => {
-            const statusElement = document.getElementById('api-health-status');
-            const statusCard = document.getElementById('api-health-status-card');
-            if (data.status === "ok") {
-                statusElement.innerText = "Healthy";
-                statusCard.classList.add('bg-success');
-            } else {
-                statusElement.innerText = "Unhealthy";
-                statusCard.classList.add('bg-danger');
-            }
-        })
-        .catch(error => {
-            console.error('Error fetching API health status:', error);
-            const statusElement = document.getElementById('api-health-status');
-            const statusCard = document.getElementById('api-health-status-card');
+
+function fetchAPIHealthStatus() {
+    const statusElement = document.getElementById('api-health-status');
+    const statusCard = document.getElementById('api-health-status-card');
+
+    fetch('/health')
+    .then(response => response.json())
+    .then(data => {        
+        if (data.status === "ok") {
+            statusElement.innerText = "Healthy";
+            statusCard.className = 'card text-white bg-success p-2';
+        } else {
             statusElement.innerText = "Unhealthy";
-            statusCard.classList.add('bg-danger');
-        });
-    }
+            statusCard.className = 'card text-white bg-danger p-2';
+        }
+    })
+    .catch(error => {
+        console.error('Error fetching API health status:', error);
+        statusElement.innerText = "Unhealthy";
+        statusCard.className = 'card text-white bg-danger p-2';
+    });
+}
 
-    // Poll API health status every 5 seconds
-    setInterval(fetchAPIHealthStatus, 5000);
+setInterval(fetchAPIHealthStatus, 5000);
 
-    // Initial call to populate the API health status on page load
-    fetchAPIHealthStatus();
+fetchAPIHealthStatus();

@@ -153,17 +153,13 @@ views_router = APIRouter(
     tags=["views"],
     include_in_schema=False
 )
-app.include_router(views_router)
-app.include_router(schnell_router)
-app.include_router(dev_router)
-app.include_router(images_router)
 
 
 # VIEWS
 @views_router.get("/", response_class=HTMLResponse)
 async def images_view(request: Request):
     try:
-        images = read_images(request)
+        images = read_images()
         return templates.TemplateResponse(
             "images.html",
             {"request": request, "images": images}
@@ -294,7 +290,7 @@ async def delete_image(image_name: str):
 @images_router.get("", response_model=ImagesSchema)
 async def get_images(request: Request):
     try:
-        return ImagesSchema(images=read_images(request))
+        return ImagesSchema(images=read_images())
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -305,6 +301,12 @@ async def get_image(image_name: str):
     if image_path.exists():
         return FileResponse(image_path)
     raise HTTPException(status_code=404, detail="Image not found")
+
+
+app.include_router(views_router)
+app.include_router(schnell_router)
+app.include_router(dev_router)
+app.include_router(images_router)
 
 
 if __name__ == "__main__":
