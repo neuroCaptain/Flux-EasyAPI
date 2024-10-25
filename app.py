@@ -4,12 +4,13 @@ import os
 import zipfile
 from pathlib import Path
 from uuid import uuid4
+import subprocess
+import asyncio
 
 from fastapi import FastAPI, APIRouter, status, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, HTMLResponse
-from pydantic import BaseModel, Field, ConfigDict
-import subprocess
+from pydantic import BaseModel, Field
 from fastapi.templating import Jinja2Templates
 
 from modules.comfyui_flux_service import (
@@ -33,6 +34,74 @@ def read_images():
         img for img in os.listdir(OUTPUT_DIR) if img.endswith(".png")
     ]
     return images
+
+
+comfyui_error_queue = asyncio.Queue()
+
+
+async def read_stdout(stdout):
+    while True:
+        line = await stdout.readline()
+        if line:
+            line_text = line.decode().strip()
+            if not line_text == "":
+                logger.comfyui(f"{line_text}")
+                error_message = parse_error_message(line_text)
+                if error_message:
+                    await comfyui_error_queue.put(error_message)
+        else:
+            break
+
+
+async def read_stderr(stderr):
+    while True:
+        line = await stderr.readline()
+        if line:
+            line_text = line.decode().strip()
+            if not line_text == "":
+                logger.comfyui(f"{line_text}")
+                error_message = parse_error_message(line_text)
+                if error_message:
+                    await comfyui_error_queue.put(error_message)
+        else:
+            break
+
+
+def parse_error_message(line_text):
+    if (
+        "Traceback" in line_text or
+        "Exception" in line_text or
+        "Error" in line_text
+    ):
+        return line_text
+    return None
+
+
+def clear_error_queue(queue: asyncio.Queue):
+    while not queue.empty():
+        try:
+            queue.get_nowait()
+            queue.task_done()
+        except asyncio.QueueEmpty:
+            break
+
+
+async def wait_for_error_or_timeout(timeout=60):
+    try:
+        done, pending = await asyncio.wait(
+            [comfyui_error_queue.get()],
+            timeout=timeout,
+            return_when=asyncio.FIRST_COMPLETED
+        )
+        if done:
+            error_message = done.pop().result()
+            raise RuntimeError(f"ComfyUI error: {error_message}")
+        else:
+            for task in pending:
+                task.cancel()
+    except asyncio.TimeoutError:
+        return
+
 
 
 # Schemas
@@ -70,11 +139,22 @@ class ImagesSchema(BaseModel):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting ComfyUI...")
-    subprocess.Popen(["python", (COMFYUI_DIR / "main.py")])
+    process = await asyncio.create_subprocess_exec(
+        "python", str(COMFYUI_DIR / "main.py"),
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    app.state.comfyui_process = process
     logger.info("ComfyUI started")
+    # Start background tasks to read stdout and stderr
+    app.state.stdout_task = asyncio.create_task(read_stdout(process.stdout))
+    app.state.stderr_task = asyncio.create_task(read_stderr(process.stderr))
+
     yield
+
     logger.info("Stopping ComfyUI...")
-    subprocess.Popen(["pkill", "-f", (COMFYUI_DIR / "main.py")])
+    process.terminate()
+    await process.wait()
     logger.info("ComfyUI stopped")
 
 

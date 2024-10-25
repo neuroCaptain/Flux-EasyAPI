@@ -38,7 +38,6 @@ async def queue_prompt(nodes):
     try:
         async with aiohttp.ClientSession() as session:
             async with session.post(f"{COMFYUI_BASE_URL}/prompt", data=data) as response:
-                print(response.status)
                 response_json = await response.json()
                 response.raise_for_status()
                 return response_json
