@@ -15,9 +15,11 @@
 
         <!-- Right column for Buttons -->
         <div class="col-md-6 d-grid gap-2">
-            <a href="/docs" class="btn btn-success">Docs</a>
-            <a href="/images/download_all" class="btn btn-primary">Download ZIP</a>
-            <button class="btn btn-danger" id="delete-btn" data-url="/images">Delete all files</button>
+            <a href="/docs" class="btn btn-success shadow">Docs</a>
+            <a href="/images/download_all" class="btn btn-primary shadow">Download ZIP</a>
+            <button type="button" class="btn btn-danger shadow" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                Delete all files
+            </button>
         </div>
     </div>
 </div>
@@ -51,6 +53,33 @@
         {% else %}
             <h2 class="text-center" id="no-images-message">No images found</h2>
         {% endif %}
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title" id="exampleModalLabel">Delete all files</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+            <p>Are you sure you want to delete all files?</p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-danger" id="delete-btn" data-url="/images">Delete all files</button>
+        </div>
+        </div>
+    </div>
+</div>
+
+<!--Tast container-->
+<div class="alert-container" style="position: fixed; bottom: 0; right: 0; z-index: 1000; padding: 1rem;">
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        <p id="alert-message">Some message</p>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 </div>
 

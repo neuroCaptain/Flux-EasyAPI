@@ -48,33 +48,32 @@ function addDownloadListeners() {
 // Function to handle the deletion of an image
 function addDeleteListeners() {
     document.querySelectorAll('.delete-image-btn').forEach(function(button) {
-        button.addEventListener('click', function() {
+        button.addEventListener('click', function(event) {
+            event.preventDefault();
             const imageName = this.getAttribute('data-image-name');
             const cardId = `image-card-${imageName}`;
 
-            if (confirm(`Are you sure you want to delete image "${imageName}"?`)) {
-                fetch(`/images/${imageName}`, {
-                    method: 'DELETE'
-                })
-                .then(response => {
-                    if (response.ok) {
-                        // Remove the image card from the DOM
-                        const imageCard = document.getElementById(cardId);
-                        if (imageCard) {
-                            imageCard.remove();
-                        }
-                        // Update the image count
-                        const currentCount = parseInt(document.getElementById('image-count').innerText);
-                        updateImageCount(currentCount - 1);
-                    } else {
-                        alert('Error deleting the image.');
+            fetch(`/images/${imageName}`, {
+                method: 'DELETE'
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Remove the image card from the DOM
+                    const imageCard = document.getElementById(cardId);
+                    if (imageCard) {
+                        imageCard.remove();
                     }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('An error occurred while deleting the image.');
-                });
-            }
+                    // Update the image count
+                    const currentCount = parseInt(document.getElementById('image-count').innerText);
+                    updateImageCount(currentCount - 1);
+                } else {
+                    alert('Error deleting the image.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while deleting the image.');
+            });
         });
     });
 }
@@ -83,23 +82,21 @@ function addDeleteListeners() {
 document.getElementById('delete-btn').addEventListener('click', function(event) {
     event.preventDefault();
     const url = event.target.getAttribute('data-url');
-    if (confirm("Are you sure you want to delete all files?")) {
-        fetch(url, {
-            method: 'DELETE',
-        })
-        .then(response => {
-            if (response.ok) {
-                alert('Files deleted successfully.');
-                location.reload(); // Reload the page after successful deletion
-            } else {
-                alert('Error deleting files.');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred.');
-        });
-    }
+    fetch(url, {
+        method: 'DELETE',
+    })
+    .then(response => {
+        if (response.ok) {
+            alert('Files deleted successfully.');
+            location.reload(); // Reload the page after successful deletion
+        } else {
+            alert('Error deleting files.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred.');
+    });
 });
 
 // Update image count directly based on the number of images fetched from the server
