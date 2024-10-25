@@ -4,7 +4,6 @@ import os
 import zipfile
 from pathlib import Path
 from uuid import uuid4
-import subprocess
 import asyncio
 
 from fastapi import FastAPI, APIRouter, status, HTTPException, Request
@@ -16,7 +15,7 @@ from fastapi.templating import Jinja2Templates
 from modules.comfyui_flux_service import (
     generate,
     get_queue_status,
-    check_health
+    check_health,
 )
 from modules.logger import logger
 from config import (
@@ -28,43 +27,15 @@ from config import (
 )
 
 
+ERROR_MESSAGES = []
+
+
 # UTILS
 def read_images():
     images = [
         img for img in os.listdir(OUTPUT_DIR) if img.endswith(".png")
     ]
     return images
-
-
-comfyui_error_queue = asyncio.Queue()
-
-
-async def read_stdout(stdout):
-    while True:
-        line = await stdout.readline()
-        if line:
-            line_text = line.decode().strip()
-            if not line_text == "":
-                logger.comfyui(f"{line_text}")
-                error_message = parse_error_message(line_text)
-                if error_message:
-                    await comfyui_error_queue.put(error_message)
-        else:
-            break
-
-
-async def read_stderr(stderr):
-    while True:
-        line = await stderr.readline()
-        if line:
-            line_text = line.decode().strip()
-            if not line_text == "":
-                logger.comfyui(f"{line_text}")
-                error_message = parse_error_message(line_text)
-                if error_message:
-                    await comfyui_error_queue.put(error_message)
-        else:
-            break
 
 
 def parse_error_message(line_text):
@@ -77,31 +48,44 @@ def parse_error_message(line_text):
     return None
 
 
-def clear_error_queue(queue: asyncio.Queue):
-    while not queue.empty():
-        try:
-            queue.get_nowait()
-            queue.task_done()
-        except asyncio.QueueEmpty:
+async def read_stdout(stdout):
+    while True:
+        line = await stdout.readline()
+        if line:
+            line_text = line.decode().strip()
+            if not line_text == "":
+                error_message = parse_error_message(line_text)
+                if error_message:
+                    logger.comfyui_error(error_message)
+                    ERROR_MESSAGES.append(error_message)
+                else:
+                    logger.comfyui(f"{line_text}")
+        else:
             break
 
 
-async def wait_for_error_or_timeout(timeout=60):
-    try:
-        done, pending = await asyncio.wait(
-            [comfyui_error_queue.get()],
-            timeout=timeout,
-            return_when=asyncio.FIRST_COMPLETED
-        )
-        if done:
-            error_message = done.pop().result()
-            raise RuntimeError(f"ComfyUI error: {error_message}")
+async def read_stderr(stderr):
+    while True:
+        line = await stderr.readline()
+        if line:
+            line_text = line.decode().strip()
+            if not line_text == "":
+                error_message = parse_error_message(line_text)
+                if error_message:
+                    logger.comfyui_error(error_message)
+                    ERROR_MESSAGES.append(error_message)
+                else:
+                    logger.comfyui(f"{line_text}")
         else:
-            for task in pending:
-                task.cancel()
-    except asyncio.TimeoutError:
-        return
+            break
 
+
+def raise_comfyui_error():
+    if ERROR_MESSAGES:
+        msg = "\n".join(ERROR_MESSAGES)
+        ERROR_MESSAGES.clear()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=msg)
 
 
 # Schemas
@@ -146,7 +130,7 @@ async def lifespan(app: FastAPI):
     )
     app.state.comfyui_process = process
     logger.info("ComfyUI started")
-    # Start background tasks to read stdout and stderr
+
     app.state.stdout_task = asyncio.create_task(read_stdout(process.stdout))
     app.state.stderr_task = asyncio.create_task(read_stderr(process.stderr))
 
@@ -169,8 +153,13 @@ views_router = APIRouter(
     tags=["views"],
     include_in_schema=False
 )
+app.include_router(views_router)
+app.include_router(schnell_router)
+app.include_router(dev_router)
+app.include_router(images_router)
 
 
+# VIEWS
 @views_router.get("/", response_class=HTMLResponse)
 async def images_view(request: Request):
     try:
@@ -183,6 +172,7 @@ async def images_view(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# API
 @app.get("/health")
 async def health():
     if not await check_health():
@@ -206,6 +196,7 @@ async def queue():
 async def dev_generate(to_generate: GenerateDevSchema):
     try:
         await generate("dev", **to_generate.model_dump(exclude_none=True))
+        raise_comfyui_error()
     except (ValueError, FileNotFoundError) as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -219,6 +210,7 @@ async def dev_generate_bulk(to_generate: list[GenerateDevSchema]):
                 "dev",
                 **generate_schema.model_dump(exclude_none=True)
             )
+        raise_comfyui_error()
     except (ValueError, FileNotFoundError) as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -228,6 +220,7 @@ async def dev_generate_bulk(to_generate: list[GenerateDevSchema]):
 async def schnell_generate(to_generate: GenerateSchnellSchema):
     try:
         await generate("schnell", **to_generate.model_dump(exclude_none=True))
+        raise_comfyui_error()
     except (ValueError, FileNotFoundError) as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -241,6 +234,7 @@ async def schnell_generate_bulk(to_generate: list[GenerateSchnellSchema]):
                 "schnell",
                 **generate_schema.model_dump(exclude_none=True)
             )
+            raise_comfyui_error()
     except (ValueError, FileNotFoundError) as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -311,12 +305,6 @@ async def get_image(image_name: str):
     if image_path.exists():
         return FileResponse(image_path)
     raise HTTPException(status_code=404, detail="Image not found")
-
-
-app.include_router(views_router)
-app.include_router(schnell_router)
-app.include_router(dev_router)
-app.include_router(images_router)
 
 
 if __name__ == "__main__":

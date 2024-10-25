@@ -1,7 +1,9 @@
 import logging
 
 COMFYUI_LEVEL = 21
+COMFYUI_ERROR_LEVEL = 31
 logging.addLevelName(COMFYUI_LEVEL, "COMFYUI")
+logging.addLevelName(COMFYUI_ERROR_LEVEL, "COMFYUI_ERROR")
 
 PADDING = 8
 
@@ -14,6 +16,7 @@ class ColoredFormatter(logging.Formatter):
         'ERROR': '\033[91m',     # Red
         'CRITICAL': '\033[95m',  # Magenta
         'COMFYUI': '\033[95m',   # Purple
+        'COMFYUI_ERROR': '\033[91m',  # Red
         'RESET': '\033[0m',      # Reset color
     }
 
@@ -25,13 +28,15 @@ class ColoredFormatter(logging.Formatter):
         return super().format(record)
 
 
-def log_comfyui(self, message, *args, **kwargs):
-    if self.isEnabledFor(COMFYUI_LEVEL):
-        self._log(COMFYUI_LEVEL, message, args, **kwargs)
+def get_log_level(level):
+    def log_level(self, message, *args, **kwargs):
+        if self.isEnabledFor(level):
+            self._log(level, message, args, **kwargs)
+    return log_level
 
 
-logging.Logger.comfyui = log_comfyui
-
+logging.Logger.comfyui = get_log_level(COMFYUI_LEVEL)
+logging.Logger.comfyui_error = get_log_level(COMFYUI_ERROR_LEVEL)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

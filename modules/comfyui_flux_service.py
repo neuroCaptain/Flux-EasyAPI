@@ -203,5 +203,4 @@ async def generate(
     else:
         logger.error(f"Invalid model: {model}")
         raise ValueError(f"Invalid model: {model}")
-    return await queue_prompt(workflow)
-
+    await queue_prompt(workflow)
