@@ -28,7 +28,7 @@ from config import (
 
 
 # UTILS
-def read_images(request: Request):
+def read_images():
     images = [
         img for img in os.listdir(OUTPUT_DIR) if img.endswith(".png")
     ]
