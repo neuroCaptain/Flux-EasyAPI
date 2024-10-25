@@ -62,17 +62,18 @@ function addDeleteListeners() {
                     const imageCard = document.getElementById(cardId);
                     if (imageCard) {
                         imageCard.remove();
+                        showAlert('Image deleted successfully.', 'success');
                     }
                     // Update the image count
                     const currentCount = parseInt(document.getElementById('image-count').innerText);
                     updateImageCount(currentCount - 1);
                 } else {
-                    alert('Error deleting the image.');
+                    showAlert('Error deleting the image.', 'danger');
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('An error occurred while deleting the image.');
+                showAlert('An error occurred while deleting the image.', 'danger');
             });
         });
     });
@@ -87,15 +88,15 @@ document.getElementById('delete-btn').addEventListener('click', function(event) 
     })
     .then(response => {
         if (response.ok) {
-            alert('Files deleted successfully.');
+            showAlert('Files deleted successfully.', 'success');
             location.reload(); // Reload the page after successful deletion
         } else {
-            alert('Error deleting files.');
+            showAlert('Error deleting files.', 'danger');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('An error occurred.');
+        showAlert('An error occurred.', 'danger');
     });
 });
 
@@ -139,6 +140,7 @@ function fetchNewImages() {
                         </div>
                     </div>`;
                 imageGrid.appendChild(col);
+                showAlert('New image added.', 'success');
 
                 // Remove the "No images found" message if present
                 if (noImagesMessage) {
@@ -154,6 +156,7 @@ function fetchNewImages() {
     })
     .catch(error => {
         console.error('Error fetching images:', error);
+        showAlert('An error occurred while fetching the images.', 'danger');
     });
 }
 
@@ -167,8 +170,28 @@ function fetchQueueStatus() {
     })
     .catch(error => {
         console.error('Error fetching queue status:', error);
+        showAlert('An error occurred while fetching the queue status.', 'danger');
     });
 }
+
+function showAlert(message, type = 'success') {
+    const alertContainer = document.getElementById('alert-container');
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type} alert-dismissible fade show`;
+    alert.role = 'alert';
+    alert.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    alertContainer.appendChild(alert);
+    
+    // Auto-dismiss after 3 seconds
+    setTimeout(() => {
+        alert.classList.remove('show');
+        alert.addEventListener('transitionend', () => alert.remove());
+    }, 2500);
+}
+
 
 const fetchQueueInterval = 20000; // Polling interval for queue and images
 
