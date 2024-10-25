@@ -8,7 +8,7 @@ from uuid import uuid4
 from fastapi import FastAPI, APIRouter, status, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, HTMLResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 import subprocess
 from fastapi.templating import Jinja2Templates
 
@@ -38,11 +38,19 @@ def read_images():
 # Schemas
 class GenerateSchema(BaseModel):
     prompt: str
-    width: Optional[int] = Field(default=None)
-    height: Optional[int] = Field(default=None)
-    batch_size: Optional[int] = Field(default=None, ge=1, le=20)
-    noise_seed: Optional[int] = Field(default=None)
-    steps: Optional[int] = Field(default=None, ge=1, le=30)
+    width: Optional[int] = Field(default=1920)
+    height: Optional[int] = Field(default=1080)
+    batch_size: Optional[int] = Field(default=1, ge=1, le=20)
+    noise_seed: Optional[int] = Field(default=42)
+    steps: Optional[int] = Field(default=None, ge=1, le=50)
+
+
+class GenerateDevSchema(GenerateSchema):
+    steps: Optional[int] = Field(default=20, ge=1, le=50)
+
+
+class GenerateSchnellSchema(GenerateSchema):
+    steps: Optional[int] = Field(default=4, ge=1, le=50)
 
 
 class QueueSchema(BaseModel):
@@ -115,7 +123,7 @@ async def queue():
 
 
 @dev_router.post("/generate", status_code=status.HTTP_204_NO_CONTENT)
-async def dev_generate(to_generate: GenerateSchema):
+async def dev_generate(to_generate: GenerateDevSchema):
     try:
         await generate("dev", **to_generate.model_dump(exclude_none=True))
     except (ValueError, FileNotFoundError) as e:
@@ -124,7 +132,7 @@ async def dev_generate(to_generate: GenerateSchema):
 
 
 @dev_router.post("/generate/bulk", status_code=status.HTTP_204_NO_CONTENT)
-async def dev_generate_bulk(to_generate: list[GenerateSchema]):
+async def dev_generate_bulk(to_generate: list[GenerateDevSchema]):
     try:
         for generate_schema in to_generate:
             await generate(
@@ -137,7 +145,7 @@ async def dev_generate_bulk(to_generate: list[GenerateSchema]):
 
 
 @schnell_router.post("/generate", status_code=status.HTTP_204_NO_CONTENT)
-async def schnell_generate(to_generate: GenerateSchema):
+async def schnell_generate(to_generate: GenerateSchnellSchema):
     try:
         await generate("schnell", **to_generate.model_dump(exclude_none=True))
     except (ValueError, FileNotFoundError) as e:
@@ -146,7 +154,7 @@ async def schnell_generate(to_generate: GenerateSchema):
 
 
 @schnell_router.post("/generate/bulk", status_code=status.HTTP_204_NO_CONTENT)
-async def schnell_generate_bulk(to_generate: list[GenerateSchema]):
+async def schnell_generate_bulk(to_generate: list[GenerateSchnellSchema]):
     try:
         for generate_schema in to_generate:
             await generate(
