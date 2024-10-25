@@ -24,7 +24,6 @@ from config import (
     TEMP_DIR,
     STATIC_DIR,
     TEMPLATES_DIR,
-    Models,
 )
 
 
