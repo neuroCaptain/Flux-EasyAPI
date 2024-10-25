@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi import HTTPException, status
 import aiohttp
 
-from config import COMFYUI_BASE_URL, WORKFLOWS_DIR
+from config import COMFYUI_BASE_URL, WORKFLOWS_DIR, Models
 from modules.logger import logger
 
 
@@ -77,16 +77,17 @@ def prepare_schnell_workflow(
     width: int = 1920,
     height: int = 1080,
     batch_size: int = 1,
-    noise_seed: int = 42,
+    noise_seed: int | None = None,
     steps: int = 4,
 ):
     logger.info("Preparing schnell workflow")
-    noise_seed = get_random_noise_seed() if noise_seed == 42 else noise_seed
     workflow = load_workflow(WorkflowPaths.SCHNELL.value)
     workflow["5"]["inputs"]["width"] = width
     workflow["5"]["inputs"]["height"] = height
     workflow["5"]["inputs"]["batch_size"] = batch_size
-    workflow["25"]["inputs"]["noise_seed"] = noise_seed
+    workflow["25"]["inputs"]["noise_seed"] = (
+        get_random_noise_seed() if noise_seed is None else noise_seed
+    )
     workflow["17"]["inputs"]["steps"] = steps
     workflow["6"]["inputs"]["text"] = prompt
     logger.info(
@@ -102,14 +103,15 @@ def prepare_dev_workflow(
     width: int = 1920,
     height: int = 1080,
     batch_size: int = 1,
-    noise_seed: int = 42,
+    noise_seed: int | None = None,
     steps: int = 20,
 ):
     logger.info("Preparing dev workflow")
-    noise_seed = get_random_noise_seed() if noise_seed == 42 else noise_seed
     workflow = load_workflow(WorkflowPaths.DEV.value)
     workflow["6"]["inputs"]["text"] = prompt
-    workflow["25"]["inputs"]["noise_seed"] = noise_seed
+    workflow["25"]["inputs"]["noise_seed"] = (
+        get_random_noise_seed() if noise_seed is None else noise_seed
+    )
     workflow["27"]["inputs"]["width"] = width
     workflow["27"]["inputs"]["height"] = height
     workflow["27"]["inputs"]["batch_size"] = batch_size
@@ -125,6 +127,62 @@ def prepare_dev_workflow(
     return workflow
 
 
+def check_dev_workflow_requirements():
+    errors = []
+    msg = "Model: {model_name} not found"
+    if not Models.FLUX_DEV.value.PATH.exists():
+        model_name = Models.FLUX_DEV.value.NAME
+        logger.error(msg.format(model_name=model_name))
+        errors.append(model_name)
+    if not Models.CLIPL.value.PATH.exists():
+        model_name = Models.CLIPL.value.NAME
+        logger.error(msg.format(model_name=model_name))
+        errors.append(model_name)
+    if not Models.FP16.value.PATH.exists():
+        model_name = Models.FP16.value.NAME
+        logger.error(msg.format(model_name=model_name))
+        errors.append(model_name)
+    # TODO: Make option to use FP8 for dev workflow
+    # elif not Models.FP8.value.PATH.exists():
+    #     model_name = Models.FP8.value.NAME
+    #     logger.error(msg.format(model_name=model_name))
+    #     errors.append(model_name)
+    if not Models.VAE.value.PATH.exists():
+        model_name = Models.VAE.value.NAME
+        logger.error(msg.format(model_name=model_name))
+        errors.append(model_name)
+    if errors:
+        raise FileNotFoundError(msg.format(model_name=", ".join(errors)))
+
+
+def check_schnell_workflow_requirements():
+    errors = []
+    msg = "Model: {model_name} not found"
+    if not Models.FLUX_SCHNELL.value.PATH.exists():
+        model_name = Models.FLUX_SCHNELL.value.NAME
+        logger.error(msg.format(model_name=model_name))
+        errors.append(model_name)
+    if not Models.CLIPL.value.PATH.exists():
+        model_name = Models.CLIPL.value.NAME
+        logger.error(msg.format(model_name=model_name))
+        errors.append(model_name)
+    if not Models.FP8.value.PATH.exists():
+        model_name = Models.FP8.value.NAME
+        logger.error(msg.format(model_name=model_name))
+        errors.append(model_name)
+    # TODO: Make option to use FP16 for schnell workflow
+    # elif not Models.FP16.value.PATH.exists():
+    #     model_name = Models.FP16.value.NAME
+    #     logger.error(msg.format(model_name=model_name))
+    #     errors.append(model_name)
+    if not Models.VAE.value.PATH.exists():
+        model_name = Models.VAE.value.NAME
+        logger.error(msg.format(model_name=model_name))
+        errors.append(model_name)
+    if errors:
+        raise FileNotFoundError(msg.format(model_name=", ".join(errors)))
+
+
 async def generate(
     model: str,
     prompt: str,
@@ -135,9 +193,11 @@ async def generate(
         f"with prompt: {prompt} and kwargs: {kwargs}"
     )
     if model == "dev":
+        check_dev_workflow_requirements()
         workflow = prepare_dev_workflow(
             prompt, **kwargs)
     elif model == "schnell":
+        check_schnell_workflow_requirements()
         workflow = prepare_schnell_workflow(
             prompt, **kwargs)
     else:

@@ -62,9 +62,6 @@ class ImagesSchema(BaseModel):
 # APP
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if not COMFYUI_DIR.exists():
-        logger.error("ComfyUI not found")
-        raise FileNotFoundError("ComfyUI not found")
     logger.info("Starting ComfyUI...")
     subprocess.Popen(["python", (COMFYUI_DIR / "main.py")])
     logger.info("ComfyUI started")
@@ -121,9 +118,8 @@ async def queue():
 @dev_router.post("/generate", status_code=status.HTTP_204_NO_CONTENT)
 async def dev_generate(to_generate: GenerateSchema):
     try:
-        # TODO: Add check that models are downloaded
         await generate("dev", **to_generate.model_dump(exclude_none=True))
-    except ValueError as e:
+    except (ValueError, FileNotFoundError) as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -131,13 +127,12 @@ async def dev_generate(to_generate: GenerateSchema):
 @dev_router.post("/generate/bulk", status_code=status.HTTP_204_NO_CONTENT)
 async def dev_generate_bulk(to_generate: list[GenerateSchema]):
     try:
-        # TODO: Add check that models are downloaded
         for generate_schema in to_generate:
             await generate(
                 "dev",
                 **generate_schema.model_dump(exclude_none=True)
             )
-    except ValueError as e:
+    except (ValueError, FileNotFoundError) as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -145,9 +140,8 @@ async def dev_generate_bulk(to_generate: list[GenerateSchema]):
 @schnell_router.post("/generate", status_code=status.HTTP_204_NO_CONTENT)
 async def schnell_generate(to_generate: GenerateSchema):
     try:
-        # TODO: Add check that models are downloaded
         await generate("schnell", **to_generate.model_dump(exclude_none=True))
-    except ValueError as e:
+    except (ValueError, FileNotFoundError) as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -155,13 +149,12 @@ async def schnell_generate(to_generate: GenerateSchema):
 @schnell_router.post("/generate/bulk", status_code=status.HTTP_204_NO_CONTENT)
 async def schnell_generate_bulk(to_generate: list[GenerateSchema]):
     try:
-        # TODO: Add check that models are downloaded
         for generate_schema in to_generate:
             await generate(
                 "schnell",
                 **generate_schema.model_dump(exclude_none=True)
             )
-    except ValueError as e:
+    except (ValueError, FileNotFoundError) as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -240,5 +233,24 @@ app.include_router(images_router)
 
 
 if __name__ == "__main__":
+    # Checks before starting the app
+    if not COMFYUI_DIR.exists():
+        msg = "ComfyUI directory not found"
+        logger.error(msg)
+        raise FileNotFoundError(msg)
+    try:
+        import torch
+        pytorch_version = torch.__version__
+        logger.info(f"PyTorch version: {pytorch_version}")
+
+        if torch.cuda.is_available():
+            cuda_version = torch.version.cuda
+            logger.info(f"CUDA version: {cuda_version}")
+        else:
+            logger.warning("CUDA version: CUDA not available.")
+    except ImportError:
+        logger.error("PyTorch is not installed.")
+        raise
+
     import uvicorn
     uvicorn.run("app:app", host="localhost", port=8000, reload=True)

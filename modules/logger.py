@@ -1,6 +1,9 @@
 import logging
 
 
+PADDING = 8
+
+
 class ColoredFormatter(logging.Formatter):
     COLORS = {
         'DEBUG': '\033[94m',     # Blue
@@ -12,9 +15,10 @@ class ColoredFormatter(logging.Formatter):
     }
 
     def format(self, record):
-        log_color = self.COLORS.get(record.levelname, self.COLORS['RESET'])
-        levelname = f"{log_color}[{record.levelname}]{self.COLORS['RESET']}"
-        record.levelname = levelname
+        log_color = self.COLORS.get(record.levelname.strip("[]"), self.COLORS['RESET'])
+        # Format level name with padding inside the brackets
+        levelname_padded = f"{log_color}{record.levelname:<{PADDING}}{self.COLORS['RESET']}"
+        record.levelname = levelname_padded
         return super().format(record)
 
 
