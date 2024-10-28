@@ -43,10 +43,10 @@ async def download_model(url: str, destination_path: Path):
                     )
     except aiohttp.ClientError as e:
         logger.error(f"Failed to download {url}. Error: {e}")
-    except asyncio.TimeoutError:
+    except asyncio.TimeoutError as e:
         logger.error(
             "Download timed out. Please check your internet "
-            "connection and try again."
+            f"connection and try again. Error: {e}"
         )
 
 

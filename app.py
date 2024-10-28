@@ -5,12 +5,18 @@ import zipfile
 from pathlib import Path
 from uuid import uuid4
 import asyncio
+import yaml
 
-from fastapi import FastAPI, APIRouter, status, HTTPException, Request
+from fastapi.openapi.utils import get_openapi
+from fastapi import (
+    FastAPI, APIRouter, status, HTTPException, Request, BackgroundTasks
+)
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
 from fastapi.templating import Jinja2Templates
+import aiohttp
 
 from modules.comfyui_flux_service import (
     generate,
@@ -18,12 +24,14 @@ from modules.comfyui_flux_service import (
     check_health,
 )
 from modules.logger import logger
+from modules.downloader import download_model as download_model_from_url
 from config import (
     COMFYUI_DIR,
     OUTPUT_DIR,
     TEMP_DIR,
     STATIC_DIR,
     TEMPLATES_DIR,
+    Models,
 )
 
 
@@ -119,6 +127,16 @@ class ImagesSchema(BaseModel):
     images: list[str]
 
 
+class ModelSchema(BaseModel):
+    model: str
+    url: str
+    is_installed: bool
+
+
+class AvailableModelsSchema(BaseModel):
+    models: list[ModelSchema]
+
+
 # APP
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -145,27 +163,21 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 app.mount("/output", StaticFiles(directory=OUTPUT_DIR), name="output")
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+# app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+models_router = APIRouter(prefix="/models", tags=["models"])
 schnell_router = APIRouter(prefix="/schnell", tags=["schnell"])
 dev_router = APIRouter(prefix="/dev", tags=["dev"])
 images_router = APIRouter(prefix="/images", tags=["images"])
-views_router = APIRouter(
-    tags=["views"],
-    include_in_schema=False
+
+
+ALLOWED_ORIGINS = ["http://localhost:3000"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
-
-
-# VIEWS
-@views_router.get("/", response_class=HTMLResponse)
-async def images_view(request: Request):
-    try:
-        images = read_images()
-        return templates.TemplateResponse(
-            "images.html",
-            {"request": request, "images": images}
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 # API
@@ -188,6 +200,50 @@ async def queue():
     )
 
 
+@models_router.get("", response_model=AvailableModelsSchema)
+async def available_models():
+    return AvailableModelsSchema(
+        models=[
+            ModelSchema(
+                model=model.value.NAME,
+                url=model.value.URL,
+                is_installed=model.value.PATH.exists()
+            )
+            for model in Models
+        ]
+    )
+
+
+@models_router.get(
+    "/{model_name}/download", status_code=status.HTTP_204_NO_CONTENT
+)
+async def download_model(model_name: str, background_tasks: BackgroundTasks):
+    model = Models.get_model_by_name(model_name)
+    if model is None:
+        raise HTTPException(status_code=404, detail="Model not found")
+    if model.PATH.exists():
+        raise HTTPException(status_code=400, detail="Model already downloaded")
+
+    try:
+        logger.info(f"Downloading {model.NAME} from {model.URL}")
+        background_tasks.add_task(
+            download_model_from_url, model.URL, model.PATH
+        )
+    except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@models_router.delete("/{model_name}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_model(model_name: str):
+    model = Models.get_model_by_name(model_name)
+    if model is None:
+        raise HTTPException(status_code=404, detail="Model not found")
+    if not model.PATH.exists():
+        raise HTTPException(status_code=400, detail="Model not downloaded")
+    model.PATH.unlink()
+
+
+# API DEV
 @dev_router.post("/generate", status_code=status.HTTP_204_NO_CONTENT)
 async def dev_generate(to_generate: GenerateDevSchema):
     try:
@@ -212,6 +268,7 @@ async def dev_generate_bulk(to_generate: list[GenerateDevSchema]):
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
+# API SCHNELL
 @schnell_router.post("/generate", status_code=status.HTTP_204_NO_CONTENT)
 async def schnell_generate(to_generate: GenerateSchnellSchema):
     try:
@@ -236,6 +293,7 @@ async def schnell_generate_bulk(to_generate: list[GenerateSchnellSchema]):
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
+# API IMAGES
 @images_router.get("/download_all", response_class=FileResponse)
 async def download_files():
     zip_filename = TEMP_DIR / f"output_{uuid4()}.zip"
@@ -303,10 +361,30 @@ async def get_image(image_name: str):
     raise HTTPException(status_code=404, detail="Image not found")
 
 
-app.include_router(views_router)
 app.include_router(schnell_router)
 app.include_router(dev_router)
 app.include_router(images_router)
+app.include_router(models_router)
+
+
+@app.get("/export_docs")
+async def export_docs():
+    openapi_schema = get_openapi(
+        title="Flux-EasyAPI",
+        version="1.0.0",
+        description="Generate images with Flux",
+        routes=app.routes,
+    )
+
+    yaml_content = yaml.dump(openapi_schema, sort_keys=False)
+
+    return Response(
+        content=yaml_content,
+        media_type="application/x-yaml",
+        headers={
+            "Content-Disposition": "attachment; filename=openapi_schema.yaml"
+        }
+    )
 
 
 if __name__ == "__main__":

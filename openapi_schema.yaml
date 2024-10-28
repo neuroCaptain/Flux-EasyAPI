@@ -1,0 +1,367 @@
+openapi: 3.1.0
+info:
+  title: Flux-EasyAPI
+  description: Generate images with Flux
+  version: 1.0.0
+paths:
+  /health:
+    get:
+      summary: Health
+      operationId: health_health_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /queue:
+    get:
+      summary: Queue
+      operationId: queue_queue_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueSchema'
+  /schnell/generate:
+    post:
+      tags:
+      - schnell
+      summary: Schnell Generate
+      operationId: schnell_generate_schnell_generate_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateSchnellSchema'
+        required: true
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /schnell/generate/bulk:
+    post:
+      tags:
+      - schnell
+      summary: Schnell Generate Bulk
+      operationId: schnell_generate_bulk_schnell_generate_bulk_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              items:
+                $ref: '#/components/schemas/GenerateSchnellSchema'
+              type: array
+              title: To Generate
+        required: true
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /dev/generate:
+    post:
+      tags:
+      - dev
+      summary: Dev Generate
+      operationId: dev_generate_dev_generate_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateDevSchema'
+        required: true
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /dev/generate/bulk:
+    post:
+      tags:
+      - dev
+      summary: Dev Generate Bulk
+      operationId: dev_generate_bulk_dev_generate_bulk_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              items:
+                $ref: '#/components/schemas/GenerateDevSchema'
+              type: array
+              title: To Generate
+        required: true
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /images/download_all:
+    get:
+      tags:
+      - images
+      summary: Download Files
+      operationId: download_files_images_download_all_get
+      responses:
+        '200':
+          description: Successful Response
+  /images/download/{image_name}:
+    get:
+      tags:
+      - images
+      summary: Download Image
+      operationId: download_image_images_download__image_name__get
+      parameters:
+      - name: image_name
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Image Name
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /images:
+    get:
+      tags:
+      - images
+      summary: Get Images
+      operationId: get_images_images_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImagesSchema'
+    delete:
+      tags:
+      - images
+      summary: Delete Files
+      operationId: delete_files_images_delete
+      responses:
+        '204':
+          description: Successful Response
+  /images/{image_name}:
+    delete:
+      tags:
+      - images
+      summary: Delete Image
+      operationId: delete_image_images__image_name__delete
+      parameters:
+      - name: image_name
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Image Name
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    get:
+      tags:
+      - images
+      summary: Get Image
+      operationId: get_image_images__image_name__get
+      parameters:
+      - name: image_name
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Image Name
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /export_docs:
+    get:
+      summary: Export Docs
+      operationId: export_docs_export_docs_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+components:
+  schemas:
+    GenerateDevSchema:
+      properties:
+        prompt:
+          type: string
+          title: Prompt
+        width:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Width
+          default: 1920
+        height:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Height
+          default: 1080
+        batch_size:
+          anyOf:
+          - type: integer
+            maximum: 20.0
+            minimum: 1.0
+          - type: 'null'
+          title: Batch Size
+          default: 1
+        noise_seed:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Noise Seed
+          default: 42
+        steps:
+          anyOf:
+          - type: integer
+            maximum: 50.0
+            minimum: 1.0
+          - type: 'null'
+          title: Steps
+          default: 20
+      type: object
+      required:
+      - prompt
+      title: GenerateDevSchema
+    GenerateSchnellSchema:
+      properties:
+        prompt:
+          type: string
+          title: Prompt
+        width:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Width
+          default: 1920
+        height:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Height
+          default: 1080
+        batch_size:
+          anyOf:
+          - type: integer
+            maximum: 20.0
+            minimum: 1.0
+          - type: 'null'
+          title: Batch Size
+          default: 1
+        noise_seed:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Noise Seed
+          default: 42
+        steps:
+          anyOf:
+          - type: integer
+            maximum: 50.0
+            minimum: 1.0
+          - type: 'null'
+          title: Steps
+          default: 4
+      type: object
+      required:
+      - prompt
+      title: GenerateSchnellSchema
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    ImagesSchema:
+      properties:
+        images:
+          items:
+            type: string
+          type: array
+          title: Images
+      type: object
+      required:
+      - images
+      title: ImagesSchema
+    QueueSchema:
+      properties:
+        queue_pending:
+          type: integer
+          title: Queue Pending
+        queue_running:
+          type: integer
+          title: Queue Running
+      type: object
+      required:
+      - queue_pending
+      - queue_running
+      title: QueueSchema
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError

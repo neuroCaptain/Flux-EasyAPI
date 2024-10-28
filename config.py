@@ -77,3 +77,10 @@ class Models(Enum):
         NAME="flux1-schnell.safetensors",
         PATH=UNET_DIR / "flux1-schnell.safetensors"
     )
+
+    @classmethod
+    def get_model_by_name(cls, model_name: str) -> Model | None:
+        for model in cls:
+            if model.value.NAME == model_name:
+                return model.value
+        return None

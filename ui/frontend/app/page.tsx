@@ -1,4 +1,4 @@
-import { ImageGeneratorComponent } from "@/components/image-generator"
+import { ImageGeneratorComponent } from "@/components/ImageGenerator"
 
 export default function Page() {
   return <ImageGeneratorComponent />
