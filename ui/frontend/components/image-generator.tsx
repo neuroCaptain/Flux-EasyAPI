@@ -305,7 +305,7 @@ export function ImageGeneratorComponent() {
   return (
     <div className="container mx-auto p-4 space-y-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold ">Flux-EasyAPI</h1>
+      <h1 className="text-3xl font-bold hidden md:block">Flux-EasyAPI</h1>
         <div className="flex items-center space-x-4">
           <Select
             value={params.model}
@@ -535,7 +535,7 @@ export function ImageGeneratorComponent() {
       </div>
 
       {viewedImage && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-100">
           <div className="bg-white rounded-lg max-w-3xl w-full">
             <div className="p-4 flex justify-between items-center border-b">
               <h2 className="text-xl font-bold">{viewedImage}</h2>
