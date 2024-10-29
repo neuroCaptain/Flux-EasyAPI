@@ -1,7 +1,11 @@
-import type { Metadata } from "next";
+'use client'
+
 import localFont from "next/font/local";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster"
+import { Header, ApiHealth } from '@/components/Header'
+import { ApiHealthContext } from '@/contexts/ApiHealthContext'
+import { useState } from "react";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -14,24 +18,25 @@ const geistMono = localFont({
   weight: "100 900",
 });
 
-export const metadata: Metadata = {
-  title: "Flux-EasyAPI",
-  description: "Generate images with Flux",
-};
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: {
+  children: React.ReactNode
+}) {
+  const [apiHealth, setApiHealth] = useState<ApiHealth>('unknown')
+
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <main>{children}</main>
-        <Toaster />
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body className="min-h-screen bg-background font-sans antialiased">
+        <ApiHealthContext.Provider value={apiHealth}>
+          <Header onApiHealthChange={setApiHealth} />
+          <main className="container mx-auto p-4 space-y-8">
+            {children}
+          </main>
+          <Toaster />
+        </ApiHealthContext.Provider>
       </body>
     </html>
-  );
+  )
 }

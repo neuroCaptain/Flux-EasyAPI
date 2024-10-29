@@ -28,7 +28,11 @@ const defaultSettings = {
   }
 }
 
-export function ImageGeneratorComponent() {
+interface ImageGeneratorComponentProps {
+  apiHealth: ApiHealth
+}
+
+export function ImageGeneratorComponent({ apiHealth }: ImageGeneratorComponentProps) {
   const [params, setParams] = useState<GenerateParams>({
     prompt: '',
     model: 'dev',
@@ -38,7 +42,6 @@ export function ImageGeneratorComponent() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [isDownloadingAll, setIsDownloadingAll] = useState(false)
   const [viewedImage, setViewedImage] = useState<string | null>(null)
-  const [apiHealth, setApiHealth] = useState<'healthy' | 'unhealthy' | 'unknown'>('unknown')
   const [queueStatus, setQueueStatus] = useState<QueueStatus | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isErrorDialogOpen, setIsErrorDialogOpen] = useState(false)
@@ -64,17 +67,6 @@ export function ImageGeneratorComponent() {
       }
     }
 
-    const checkHealth = async () => {
-      try {
-        await imageApi.checkHealth()
-        setApiHealth('healthy')
-        setError(null)
-      } catch (error) {
-        setApiHealth('unhealthy')
-        setError('API is currently unavailable. Some features may not work.')
-      }
-    }
-
     const getQueueStatus = async () => {
       try {
         const status = await imageApi.getQueueStatus()
@@ -86,16 +78,13 @@ export function ImageGeneratorComponent() {
     }
 
     const imageInterval = setInterval(pollImages, 5000)
-    const healthInterval = setInterval(checkHealth, 30000)
     const queueInterval = setInterval(getQueueStatus, 10000)
 
-    checkHealth()
     pollImages()
     getQueueStatus()
 
     return () => {
       clearInterval(imageInterval)
-      clearInterval(healthInterval)
       clearInterval(queueInterval)
     }
   }, [images, toast])
@@ -116,7 +105,7 @@ export function ImageGeneratorComponent() {
         await imageApi.generateImage(params)
       } else {
         const bulkParams = JSON.parse(bulkJson)
-        await imageApi.generateBulkImages(bulkParams)
+        await imageApi.generateBulkImages(bulkParams, params.model)
       }
       toast({
         title: "Image generation started",
@@ -238,8 +227,7 @@ export function ImageGeneratorComponent() {
   }
 
   return (
-    <div className="container mx-auto p-4 space-y-8">
-      <Header apiHealth={apiHealth}/>
+    <div className="space-y-8">
       <GenerationTypeSelector generationType={generationType} setGenerationType={setGenerationType} model={params.model} onModelChange={handleModelChange}/>
       <GenerationForm
         generationType={generationType}

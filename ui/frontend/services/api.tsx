@@ -17,6 +17,14 @@ export interface QueueStatus {
   queue_running: number
 }
 
+export type ModelInstalledStatus = 'installed' | 'not installed' | 'installing'
+
+export interface ModelSchema {
+  model: string
+  url: string
+  is_installed: ModelInstalledStatus
+}
+
 class ImageApi {
   private axiosInstance: AxiosInstance
 
@@ -46,8 +54,8 @@ class ImageApi {
     await this.axiosInstance.post(endpoint, params)
   }
 
-  async generateBulkImages(bulkParams: any): Promise<void> {
-    const endpoint = '/dev/generate/bulk' // Assuming bulk generation is only for dev model
+  async generateBulkImages(bulkParams: any, model: string): Promise<void> {
+    const endpoint = model === 'dev' ? '/dev/generate/bulk' : '/schnell/generate/bulk'
     await this.axiosInstance.post(endpoint, bulkParams)
   }
 
@@ -71,6 +79,19 @@ class ImageApi {
 
   async deleteAllImages(): Promise<void> {
     await this.axiosInstance.delete('/images/all')
+  }
+
+  async getModels(): Promise<ModelSchema[]> {
+    const response = await this.axiosInstance.get('/models')
+    return response.data
+  }
+
+  async downloadModel(modelName: string): Promise<void> {
+    await this.axiosInstance.get(`/models/${modelName}/download`)
+  }
+
+  async deleteModel(modelName: string): Promise<void> {
+    await this.axiosInstance.delete(`/models/${modelName}`)
   }
 }
 

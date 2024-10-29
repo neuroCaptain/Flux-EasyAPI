@@ -1,19 +1,40 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Loader2, CheckCircle, AlertTriangle, Zap, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { imageApi } from '@/services/api'
 
+export type ApiHealth = 'healthy' | 'unhealthy' | 'unknown'
 
 interface HeaderProps {
-  apiHealth: 'healthy' | 'unhealthy' | 'unknown'
+  onApiHealthChange: (health: ApiHealth) => void
 }
 
-export function Header({ apiHealth}: HeaderProps) {
-  
+export function Header({ onApiHealthChange }: HeaderProps) {
+  const [apiHealth, setApiHealth] = useState<ApiHealth>('unknown')
   const pathname = usePathname()
+
+  useEffect(() => {
+    const checkHealth = async () => {
+      try {
+        await imageApi.checkHealth()
+        setApiHealth('healthy')
+        onApiHealthChange('healthy')
+      } catch (error) {
+        setApiHealth('unhealthy')
+        onApiHealthChange('unhealthy')
+      }
+    }
+
+    checkHealth()
+    const healthInterval = setInterval(checkHealth, 15000)
+
+    return () => clearInterval(healthInterval)
+  }, [onApiHealthChange])
 
   return (
     <div className="flex justify-between items-center mb-6 p-4 bg-background border-b">

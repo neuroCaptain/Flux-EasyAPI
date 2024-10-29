@@ -6,6 +6,7 @@ from pathlib import Path
 from uuid import uuid4
 import asyncio
 import yaml
+from enum import StrEnum
 
 from fastapi.openapi.utils import get_openapi
 from fastapi import (
@@ -24,13 +25,14 @@ from modules.comfyui_flux_service import (
     check_health,
 )
 from modules.logger import logger
-from modules.downloader import download_model as download_model_from_url
+from modules.background_tasks import download_model_in_background
 from config import (
     COMFYUI_DIR,
     OUTPUT_DIR,
     TEMP_DIR,
     STATIC_DIR,
     TEMPLATES_DIR,
+    ALLOWED_ORIGINS,
     Models,
 )
 
@@ -44,6 +46,24 @@ def read_images():
         img for img in os.listdir(OUTPUT_DIR) if img.endswith(".png")
     ]
     return images
+
+
+def parce_models():
+    models = []
+    for model in Models:
+        is_installed = ModelInstalledStatus.NOT_INSTALLED.value
+        if model.value.NAME in app.state.bg_tasks:
+            is_installed = ModelInstalledStatus.INSTALLING.value
+        elif model.value.PATH.exists():
+            is_installed = ModelInstalledStatus.INSTALLED.value
+        models.append(
+            ModelSchema(
+                model=model.value.NAME,
+                url=model.value.URL,
+                is_installed=is_installed
+            )
+        )
+    return models
 
 
 def parse_error_message(line_text):
@@ -127,14 +147,16 @@ class ImagesSchema(BaseModel):
     images: list[str]
 
 
+class ModelInstalledStatus(StrEnum):
+    INSTALLED = "installed"
+    NOT_INSTALLED = "not installed"
+    INSTALLING = "installing"
+
+
 class ModelSchema(BaseModel):
     model: str
     url: str
-    is_installed: bool
-
-
-class AvailableModelsSchema(BaseModel):
-    models: list[ModelSchema]
+    is_installed: ModelInstalledStatus
 
 
 # APP
@@ -152,6 +174,8 @@ async def lifespan(app: FastAPI):
     app.state.stdout_task = asyncio.create_task(read_stdout(process.stdout))
     app.state.stderr_task = asyncio.create_task(read_stderr(process.stderr))
 
+    app.state.bg_tasks = set()
+
     yield
 
     logger.info("Stopping ComfyUI...")
@@ -168,9 +192,6 @@ models_router = APIRouter(prefix="/models", tags=["models"])
 schnell_router = APIRouter(prefix="/schnell", tags=["schnell"])
 dev_router = APIRouter(prefix="/dev", tags=["dev"])
 images_router = APIRouter(prefix="/images", tags=["images"])
-
-
-ALLOWED_ORIGINS = ["http://localhost:3000"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -200,18 +221,9 @@ async def queue():
     )
 
 
-@models_router.get("", response_model=AvailableModelsSchema)
+@models_router.get("", response_model=list[ModelSchema])
 async def available_models():
-    return AvailableModelsSchema(
-        models=[
-            ModelSchema(
-                model=model.value.NAME,
-                url=model.value.URL,
-                is_installed=model.value.PATH.exists()
-            )
-            for model in Models
-        ]
-    )
+    return parce_models()
 
 
 @models_router.get(
@@ -224,13 +236,13 @@ async def download_model(model_name: str, background_tasks: BackgroundTasks):
     if model.PATH.exists():
         raise HTTPException(status_code=400, detail="Model already downloaded")
 
-    try:
-        logger.info(f"Downloading {model.NAME} from {model.URL}")
-        background_tasks.add_task(
-            download_model_from_url, model.URL, model.PATH
-        )
-    except (aiohttp.ClientError, asyncio.TimeoutError) as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    background_tasks.add_task(
+        download_model_in_background,
+        app,
+        model.NAME,
+        model.URL,
+        model.PATH
+    )
 
 
 @models_router.delete("/{model_name}", status_code=status.HTTP_204_NO_CONTENT)
@@ -346,7 +358,7 @@ async def delete_image(image_name: str):
 
 
 @images_router.get("", response_model=ImagesSchema)
-async def get_images(request: Request):
+async def get_images():
     try:
         return ImagesSchema(images=read_images())
     except Exception as e:
@@ -373,7 +385,7 @@ async def export_docs():
         title="Flux-EasyAPI",
         version="1.0.0",
         description="Generate images with Flux",
-        routes=app.routes,
+        routes=models_router.routes,
     )
 
     yaml_content = yaml.dump(openapi_schema, sort_keys=False)

@@ -20,6 +20,8 @@ WORKFLOWS_DIR = BASE_DIR / "workflows"
 STATIC_DIR = Path(__file__).parent / "ui/static"
 TEMPLATES_DIR = Path(__file__).parent / "ui/templates"
 
+ALLOWED_ORIGINS = ["http://localhost:3000"]
+
 # ComfyUI
 COMFYUI_REPO = "https://github.com/comfyanonymous/ComfyUI"
 
