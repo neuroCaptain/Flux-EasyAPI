@@ -10,14 +10,13 @@ from enum import StrEnum
 
 from fastapi.openapi.utils import get_openapi
 from fastapi import (
-    FastAPI, APIRouter, status, HTTPException, Request, BackgroundTasks
+    FastAPI, APIRouter, status, HTTPException, BackgroundTasks
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
 from fastapi.templating import Jinja2Templates
-import aiohttp
 
 from modules.comfyui_flux_service import (
     generate,
@@ -187,11 +186,16 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 app.mount("/output", StaticFiles(directory=OUTPUT_DIR), name="output")
-# app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="next_static")
+
+# app.mount("/_next", StaticFiles(directory=STATIC_DIR / "_next"), name="next")
 models_router = APIRouter(prefix="/models", tags=["models"])
 schnell_router = APIRouter(prefix="/schnell", tags=["schnell"])
 dev_router = APIRouter(prefix="/dev", tags=["dev"])
 images_router = APIRouter(prefix="/images", tags=["images"])
+views_router = APIRouter(
+    prefix="/views", tags=["views"], include_in_schema=False
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -199,6 +203,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# @app.get("/")
+# async def root():
+#     return FileResponse(STATIC_DIR / "index.html")
+
+
+# @views_router.get("/settings")
+# async def settings():
+#     return FileResponse(STATIC_DIR / "settings.html")
 
 
 # API
@@ -377,6 +391,7 @@ app.include_router(schnell_router)
 app.include_router(dev_router)
 app.include_router(images_router)
 app.include_router(models_router)
+app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
 
 
 @app.get("/export_docs")

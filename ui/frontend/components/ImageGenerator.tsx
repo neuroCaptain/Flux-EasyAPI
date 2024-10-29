@@ -11,7 +11,7 @@ import { ActionButtons } from './ActionButtons'
 import { ImageGrid } from './ImageGrid'
 import { ImageViewer } from './ImageViewer'
 import { ErrorDialog } from './ErrorDialog'
-import { ApiHealth } from '@/services/api'
+import { ApiHealth } from './Header'
 
 const defaultSettings = {
   dev: {
