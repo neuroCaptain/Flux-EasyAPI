@@ -53,7 +53,7 @@ export default function ModelsPage() {
     } catch (err) {
       toast({
         title: "Error",
-        description: `Failed to start download for model ${modelName}. Please try again.`,
+        description: `Failed to start download for model ${modelName}. Please try again. Error: ${err}`,
         variant: "destructive",
       })
     }
@@ -70,7 +70,7 @@ export default function ModelsPage() {
     } catch (err) {
       toast({
         title: "Error",
-        description: `Failed to delete model ${modelName}. Please try again.`,
+        description: `Failed to delete model ${modelName}. Please try again. Error: ${err}`,
         variant: "destructive",
       })
     }

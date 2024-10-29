@@ -4,7 +4,6 @@ import axios from 'axios'
 import { useState, useEffect } from 'react'
 import { useToast } from "@/hooks/use-toast"
 import { imageApi, GenerateParams, QueueStatus } from '../services/api'
-import { Header } from './Header'
 import { GenerationTypeSelector } from './GenerationTypeSelector'
 import { GenerationForm } from './GenerationForm'
 import { QueueStatus as QueueStatusComponent } from './QueueStatus'
@@ -12,6 +11,7 @@ import { ActionButtons } from './ActionButtons'
 import { ImageGrid } from './ImageGrid'
 import { ImageViewer } from './ImageViewer'
 import { ErrorDialog } from './ErrorDialog'
+import { ApiHealth } from '@/services/api'
 
 const defaultSettings = {
   dev: {

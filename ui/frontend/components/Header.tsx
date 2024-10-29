@@ -27,6 +27,7 @@ export function Header({ onApiHealthChange }: HeaderProps) {
       } catch (error) {
         setApiHealth('unhealthy')
         onApiHealthChange('unhealthy')
+        console.error('API health check failed:', error)
       }
     }
 
