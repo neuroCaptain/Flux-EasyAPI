@@ -35,7 +35,7 @@ from config import (
     Models,
 )
 
-
+# TODO move to state. Clear after each request?
 ERROR_MESSAGES = []
 
 
@@ -400,7 +400,7 @@ async def export_docs():
         title="Flux-EasyAPI",
         version="1.0.0",
         description="Generate images with Flux",
-        routes=models_router.routes,
+        routes=app.routes,
     )
 
     yaml_content = yaml.dump(openapi_schema, sort_keys=False)

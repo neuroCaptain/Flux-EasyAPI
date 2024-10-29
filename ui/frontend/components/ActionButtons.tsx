@@ -37,7 +37,7 @@ export function ActionButtons({
         Delete All Images
       </Button>
       <Button 
-        onClick={() => window.open('https://your-docs-url.com', '_blank')} 
+        onClick={() => window.open('/docs', '_blank')} 
         className="flex-1 bg-green-600 text-white hover:bg-green-700"
       >
         <FileText className="mr-2 h-4 w-4" />
